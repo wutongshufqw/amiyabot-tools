@@ -1,0 +1,93 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
+table {
+    border-collapse: collapse;
+}
+
+.index-col {
+    width: 30px;
+    height: 20px;
+    text-align: center;
+    line-height: 20px;
+    font-size: 0.9rem;
+}
+
+.index-row {
+    width: 20px;
+    height: 30px;
+    text-align: center;
+    line-height: 30px;
+    font-size: 0.9rem;
+}
+
+.game {
+    border: 1px solid darkgray;
+    width: 30px;
+    height: 30px;
+    text-align: center;
+    line-height: 30px;
+}
+
+.blank {
+    width: 30px;
+    height: 30px;
+    border: 0.2rem outset grey;
+    background-color: darkgray;
+    font-size: 1.4rem;
+}
+
+.number {
+    width: 30px;
+    height: 30px;
+    border: 0.2rem inset whitesmoke;
+    background-color: lightgray;
+    font-size: 1.3rem;
+}
+
+.number-1 {
+    color: blue;
+}
+
+.number-2 {
+    color: green;
+}
+
+.number-3 {
+    color: red;
+}
+
+.number-4 {
+    color: darkblue;
+}
+
+.number-5 {
+    color: brown;
+}
+
+.number-6 {
+    color: cyan;
+}
+
+.number-7 {
+    color: black;
+}
+
+.number-8 {
+    color: grey;
+}
+
+.number-9 {
+    font-size: 1.5rem;
+    color: darkgrey;
+}
+
+.bomb {
+    width: 30px;
+    height: 30px;
+    border: 0.2rem inset tomato;
+    background-color: red;
+    font-size: 1.4rem;
+}

@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>template</title>
+    <link rel="stylesheet" href="../css/gomoku.css">
+    <script src="../js/vue.min.js"></script>
+</head>
+<body>
+<div id="template">
+    <div class="head">
+        <table>
+            <tr>
+                <td rowspan="2">
+                    <img class="avatar" :src="data.avatar" alt="">
+                </td>
+                <td>
+                    <div class="player">当前玩家：{{data.player}}</div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div>
+                        <table class="color">
+                            <tr>
+                                <td>棋子颜色：</td>
+                                <td>
+                                    <img v-if="data.chessColor === 'black'" src="../resource/image/gomoku/black.png" alt="player1">
+                                    <img v-if="data.chessColor === 'white'" src="../resource/image/gomoku/white.png" alt="player2">
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="gomoku">
+        <canvas id="gomoku" width="620" height="620"></canvas>
+    </div>
+</div>
+</body>
+<script>
+    const template = new Vue({
+        el: '#template',
+        methods: {
+            init(data) {
+                this.$set(this, 'data', data)
+                let _this = this;
+                _this.flag = 0;
+                let container = document.getElementById("gomoku");
+                _this.ctx = container.getContext("2d");
+                _this.ctx.translate(70,70);
+                let img1 = new Image();
+                img1.src = "../resource/image/gomoku/black.png";
+                img1.onload = function () {
+                    _this.img1 = img1;
+                    _this.drawChesses();
+                }
+                let img2 = new Image();
+                img2.src = "../resource/image/gomoku/white.png";
+                img2.onload = function () {
+                    _this.img2 = img2;
+                    _this.drawChesses();
+                }
+                _this.drawCheckerboard();
+            },
+            drawCheckerboard() {
+                // 画棋盘
+                let _this = this;
+                _this.ctx.beginPath();
+                _this.fillRoundRect(_this.ctx, 0, 0, 480, 480, 10, "#fff6");
+                for (let i = 0; i < 15; i++) {
+                  _this.ctx.beginPath();
+                  _this.ctx.strokeStyle = "#000";
+                  _this.ctx.moveTo(30 + i * 30, 30); //垂直方向画15根线，相距30px;
+                  _this.ctx.lineTo(30 + i * 30, 450);
+                  _this.ctx.stroke();
+                  _this.ctx.moveTo(30, 30 + i * 30); //水平方向画15根线，相距30px;棋盘为14*14；
+                  _this.ctx.lineTo(450, 30 + i * 30);
+                  _this.ctx.stroke();
+                }
+                for (let i = 0; i < 15; i++) {
+                    _this.ctx.font = "20px Times New Roman";
+                    _this.ctx.fillStyle = "#000";
+                    _this.ctx.fillText(i.toString(), 8, 15 + i * 30 + 20);
+                    _this.ctx.fillText(i.toString(), 15 + i * 30 + 6, 20);
+                    _this.ctx.fillText(i.toString(), 455, 15 + i * 30 + 20);
+                    _this.ctx.fillText(i.toString(), 15 + i * 30 + 6, 470);
+
+                }
+            },
+            fillRoundRect(cxt, x, y, width, height, radius, fillColor) {
+                let _this = this
+                //圆的直径必然要小于矩形的宽高
+                if (2 * radius > width || 2 * radius > height) { return false; }
+
+                cxt.save();
+                cxt.translate(x, y);
+                //绘制圆角矩形的各个边
+                _this.drawRoundRectPath(cxt, width, height, radius);
+                cxt.fillStyle = fillColor || "#000"; //若是给定了值就用给定的值否则给予默认值
+                cxt.fill();
+                cxt.restore();
+            },
+            drawRoundRectPath(cxt, width, height, radius) {
+                cxt.beginPath(0);
+                //从右下角顺时针绘制，弧度从0到1/2PI
+                cxt.arc(width - radius, height - radius, radius, 0, Math.PI / 2);
+
+                //矩形下边线
+                cxt.lineTo(radius, height);
+
+                //左下角圆弧，弧度从1/2PI到PI
+                cxt.arc(radius, height - radius, radius, Math.PI / 2, Math.PI);
+
+                //矩形左边线
+                cxt.lineTo(0, radius);
+
+                //左上角圆弧，弧度从PI到3/2PI
+                cxt.arc(radius, radius, radius, Math.PI, Math.PI * 3 / 2);
+
+                //上边线
+                cxt.lineTo(width - radius, 0);
+
+                //右上角圆弧
+                cxt.arc(width - radius, radius, radius, Math.PI * 3 / 2, Math.PI * 2);
+
+                //右边线
+                cxt.lineTo(width, height - radius);
+                cxt.closePath();
+            },
+            drawChesses() {
+                let _this = this
+                _this.flag++
+                if(_this.flag < 2)
+                    return
+                for(let i = 0; i < _this.data.chessMap.length; i++) {
+                    for(let j = 0; j < _this.data.chessMap[i].length; j++) {
+                        if(_this.data.chessMap[i][j] !== '') {
+                            _this.drawChess(i, j, _this.data.chessMap[i][j])
+                        }
+                    }
+                }
+            },
+            drawChess(xLine, yLine, color) {
+                let _this = this;
+                console.log(xLine, yLine, color)
+                x = xLine * 30 + 30;
+                y = yLine * 30 + 30;
+                //在指定位置放置棋子图片
+                let img;
+                if (color === "black")
+                    img = _this.img1
+                else if (color === "white")
+                    img = _this.img2
+                else
+                    return
+                _this.ctx.drawImage(img, y - 13, x - 13, 26, 26);
+            },
+        },
+        data() {
+            return {
+                data: {}
+            }
+        },
+        mounted() {
+            // 暴露 init 方法供核心调用
+            window.init = this.init
+        }
+    })
+</script>
+</html>

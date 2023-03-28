@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+          name="viewport">
+    <title>template</title>
+    <link rel="stylesheet" href="../css/winmine.css">
+    <script src="../js/vue.min.js"></script>
+</head>
+<body>
+<div id="template">
+    <table>
+        <tr>
+            <td></td>
+            <td :key="index" class="index-col" v-for="(col, index) in data.map[0]">{{index}}</td>
+        </tr>
+        <tr :key="index" v-for="(row, index) in data.map">
+            <td class="index-row">{{index}}</td>
+            <td :key="index" class="game" v-for="(col, index) in row">
+                <div class="blank" v-if="col === -1"></div>
+                <div class="number" v-else-if="col === 0"></div>
+                <div :class="'number number-' + col" v-else-if="col >= 1 && col <=8"><b>{{col}}</b></div>
+                <div class="bomb" v-else-if="col === 9"><b>💣</b></div>
+                <div class="blank" v-else-if="col === 10"><b>🚩</b></div>
+            </td>
+            <td class="index-row">{{index}}</td>
+        </tr>
+        <tr>
+            <td></td>
+            <td :key="index" class="index-col" v-for="(col, index) in data.map[0]">{{index}}</td>
+        </tr>
+    </table>
+</div>
+</body>
+<script>
+    const template = new Vue({
+        el: '#template',
+        methods: {
+            init(data) {
+                this.$set(this, 'data', data)
+            }
+        },
+        data() {
+            return {
+                data: {}
+            }
+        },
+        mounted() {
+            // 暴露 init 方法供核心调用
+            window.init = this.init
+        }
+    })
+</script>
+</html>

@@ -1,0 +1,56 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
+#template {
+    width: 100%;
+    overflow: auto;
+    background: url(../resource/image/gomoku/background.png) no-repeat center center;
+    background-size: cover;
+}
+
+.head {
+    margin: 10px auto;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+}
+
+.avatar {
+    width: 80px;
+    height: 80px;
+    margin: 10px 20px;
+    border: 4px solid transparent;
+    border-radius: 50%;
+    background-clip: padding-box, border-box;
+    background-origin: padding-box, border-box;
+    background-image: linear-gradient(to right, #222, #222), linear-gradient(90deg, #8F41E9, #578AEF);
+}
+
+.player {
+    margin: 0px 20px;
+    font-size: 20px;
+    font-weight: bold;
+    font-family: 楷体, 'Times New Roman', Times, serif;
+    background: linear-gradient(to right,#f0610e, #e8771a, #fff34a);
+    -webkit-background-clip: text;
+    color: transparent;
+}
+
+.color {
+    margin: 0px 18px;
+    font-size: 20px;
+    font-weight: bold;
+    font-family: 楷体, 'Times New Roman', Times, serif;
+    background: linear-gradient(to right,#6190e8, #92b1e7, #a7bfe8);
+    -webkit-background-clip: text;
+    color: transparent;
+}
+
+.gomoku {
+    margin: 10px;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+}
