@@ -3,6 +3,7 @@ import json
 import math
 import os
 import random
+import shutil
 import sys
 import traceback
 
@@ -18,7 +19,7 @@ from amiyabot.network.download import download_async
 from amiyabot.network.httpRequests import http_requests
 from lxml import etree
 
-from core import bot as main_bot
+from core import bot as main_bot, GitAutomation
 from core.database.bot import *
 from core.database.user import UserInfo
 from core.util import create_dir, read_yaml
@@ -45,7 +46,7 @@ class BottleFlowPluginInstance(PluginInstance):
 
 bot = BottleFlowPluginInstance(
     name='小工具合集',
-    version='1.5.0',
+    version='1.6.0',
     plugin_id='amiyabot-tools',
     plugin_type='tools',
     description='AmiyaBot小工具合集 By 天基',
@@ -93,7 +94,7 @@ def remove_file(path: str):
 
 def remove_dir(path: str):
     if os.path.exists(path):
-        os.removedirs(path)
+        shutil.rmtree(path)
 
 
 def config_install():
@@ -254,6 +255,8 @@ def verify_prefix(msg: str):
 
 
 async def check_ai(data: Message):
+    if data.is_at and '撤回' not in data.text_original and '兔兔chat' not in data.text_original:
+        return True, 10, True
     msg = data.text_original
     if msg == '' or re.match(r'^\d+$', msg) or msg in ['初级', '中级', '高级', '资深', '普通', '硬核']:
         return False, -1, False
@@ -269,6 +272,8 @@ async def check_ai(data: Message):
 
 @bot.on_message(verify=check_ai, check_prefix=False, allow_direct=False)
 async def ai(data: Message):
+    if data.is_at:
+        return
     if data.verify.keypoint:
         data.text_original = data.text_original.replace('兔兔', '')
     if data.text_original.startswith('天气'):
@@ -738,67 +743,70 @@ async def gomoku(data: Message):
         m = pattern.match(reply.text_original)
         row = int(m.group(1))
         col = int(m.group(2))
-        if chess[row][col] == '':
-            chess[row][col] = flag
-            # 判断是否胜利
-            for i in range(row - 4, row + 5):
-                if 0 <= i <= 14:
-                    if chess[i][col] == flag:
-                        check = True
-                        for j in range(1, 5):
-                            if chess[i + j][col] != flag:
-                                check = False
-                                break
-                        if check:
-                            event.close_event()
-                            remove_file(file_path1)
-                            remove_file(file_path2)
-                            await data.send(Chain(data, at=False).text(f'{name1 if flag == "black" else name2} 赢了!'))
-            for i in range(col - 4, col + 5):
-                if 0 <= i <= 14:
-                    if chess[row][i] == flag:
-                        check = True
-                        for j in range(1, 5):
-                            if chess[row][i + j] != flag:
-                                check = False
-                                break
-                        if check:
-                            event.close_event()
-                            remove_file(file_path1)
-                            remove_file(file_path2)
-                            await data.send(Chain(data, at=False).text(f'{name1 if flag == "black" else name2} 赢了!'))
-                            return
-            for i in range(-4, 5):
-                if 0 <= row + i <= 14 and 0 <= col + i <= 14:
-                    if chess[row + i][col + i] == flag:
-                        check = True
-                        for j in range(1, 5):
-                            if chess[row + i + j][col + i + j] != flag:
-                                check = False
-                                break
-                        if check:
-                            event.close_event()
-                            remove_file(file_path1)
-                            remove_file(file_path2)
-                            await data.send(Chain(data, at=False).text(f'{name1 if flag == "black" else name2} 赢了!'))
-                            return
-            for i in range(-4, 5):
-                if 0 <= row + i <= 14 and 0 <= col - i <= 14:
-                    if chess[row + i][col - i] == flag:
-                        check = True
-                        for j in range(1, 5):
-                            if chess[row + i + j][col - i - j] != flag:
-                                check = False
-                                break
-                        if check:
-                            event.close_event()
-                            remove_file(file_path1)
-                            remove_file(file_path2)
-                            await data.send(Chain(data, at=False).text(f'{name1 if flag == "black" else name2} 赢了!'))
-                            return
-            flag = 'black' if flag == 'white' else 'white'
+        if 0 <= row <= 14 and 0 <= col <= 14:
+            if chess[row][col] == '':
+                chess[row][col] = flag
+                # 判断是否胜利
+                for i in range(row - 4, row + 5):
+                    if 0 <= i <= 10:
+                        if chess[i][col] == flag:
+                            check = True
+                            for j in range(1, 5):
+                                if chess[i + j][col] != flag:
+                                    check = False
+                                    break
+                            if check:
+                                event.close_event()
+                                remove_file(file_path1)
+                                remove_file(file_path2)
+                                await data.send(Chain(data, at=False).text(f'{name1 if flag == "black" else name2} 赢了!'))
+                for i in range(col - 4, col + 5):
+                    if 0 <= i <= 10:
+                        if chess[row][i] == flag:
+                            check = True
+                            for j in range(1, 5):
+                                if chess[row][i + j] != flag:
+                                    check = False
+                                    break
+                            if check:
+                                event.close_event()
+                                remove_file(file_path1)
+                                remove_file(file_path2)
+                                await data.send(Chain(data, at=False).text(f'{name1 if flag == "black" else name2} 赢了!'))
+                                return
+                for i in range(-4, 5):
+                    if 0 <= row + i <= 10 and 0 <= col + i <= 10:
+                        if chess[row + i][col + i] == flag:
+                            check = True
+                            for j in range(1, 5):
+                                if chess[row + i + j][col + i + j] != flag:
+                                    check = False
+                                    break
+                            if check:
+                                event.close_event()
+                                remove_file(file_path1)
+                                remove_file(file_path2)
+                                await data.send(Chain(data, at=False).text(f'{name1 if flag == "black" else name2} 赢了!'))
+                                return
+                for i in range(-4, 5):
+                    if 0 <= row + i <= 10 and 0 <= col - i <= 10:
+                        if chess[row + i][col - i] == flag:
+                            check = True
+                            for j in range(1, 5):
+                                if chess[row + i + j][col - i - j] != flag:
+                                    check = False
+                                    break
+                            if check:
+                                event.close_event()
+                                remove_file(file_path1)
+                                remove_file(file_path2)
+                                await data.send(Chain(data, at=False).text(f'{name1 if flag == "black" else name2} 赢了!'))
+                                return
+                flag = 'black' if flag == 'white' else 'white'
+            else:
+                await data.send(Chain(data, at=False).text('该位置已有棋子, 请重新输入'))
         else:
-            await data.send(Chain(data, at=False).text('该位置已有棋子, 请重新输入'))
+            await data.send(Chain(data, at=False).text('输入坐标超出范围, 请重新输入'))
 
 
 # 修改群名片&群头衔
@@ -1293,6 +1301,23 @@ async def clear_new_friends(data: Message):
             return Chain(data).text('操作失败')
     else:
         return Chain(data).text('权限不足')
+
+
+async def verify_gacha(data: Message):
+    if '更新卡池图片' in data.text_original:
+        return True, 5
+    else:
+        return False, 0
+
+
+@bot.on_message(verify=verify_gacha, direct_only=True)
+async def update_gacha_pool(data: Message):
+    if bool(Admin.get_or_none(account=data.user_id)):
+        await data.send(Chain(data).text('开始更新卡池图片...'))
+        git_path = 'resource/plugins/gacha/pool'
+        git_url = 'https://gitlab.com/wutongshufqw/arknights-pool.git'
+        GitAutomation(git_path, git_url).update()
+        await data.send(Chain(data).text('更新完成'))
 
 
 # 撤回控制
