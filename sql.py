@@ -1,3 +1,4 @@
+import datetime
 import time
 
 from amiyabot.database import *
@@ -71,6 +72,35 @@ class Welcome(ToolsBaseModel):
 class Fake(ToolsBaseModel):
     id: int = IntegerField(primary_key=True)
     appid: int = IntegerField()
+    channel_id: str = CharField()
+    open: bool = BooleanField()
+
+
+@table
+class Lottery(ToolsBaseModel):
+    id: int = IntegerField(primary_key=True)
+    appid: int = IntegerField()
+    channel_id: str = CharField()
+    date: datetime.date = DateField(null=True)
+    times: int = IntegerField(null=True)
+
+
+@table
+class Tools(ToolsBaseModel):
+    id: int = IntegerField(primary_key=True)
+    main_id: int = IntegerField()
+    sub_id: int = IntegerField()
+    sub_sub_id: int = IntegerField()
+    appid: int = IntegerField()
+    tool_name: str = CharField()
+    open: bool = BooleanField()
+    version: str = CharField()
+
+
+@table
+class ToolsConfig(ToolsBaseModel):
+    id: int = IntegerField(primary_key=True)
+    tool_id: int = IntegerField()
     channel_id: str = CharField()
     open: bool = BooleanField()
 
@@ -200,3 +230,62 @@ class SQLHelper:
     @staticmethod
     async def get_fake(appid: str, channel_id: str):
         return Fake.get_or_none(Fake.appid == appid, Fake.channel_id == channel_id)
+
+    @staticmethod
+    async def get_lottery(appid: str, channel_id: str):
+        lottery = Lottery.get_or_none(Lottery.appid == appid, Lottery.channel_id == channel_id)
+        if lottery:
+            return lottery
+        else:
+            return Lottery.create(appid=appid, channel_id=channel_id)
+
+    @staticmethod
+    async def set_lottery(id_: int, times: int, date: datetime.date = None):
+        lottery = Lottery.get_or_none(Lottery.id == id_)
+        if lottery:
+            lottery.times = times
+            if date:
+                lottery.date = date
+            return lottery.save()
+        else:
+            return None
+
+    @staticmethod
+    async def get_tools_list(appid: str):
+        return Tools.select().where(Tools.appid == appid)
+
+    @staticmethod
+    async def add_tool(appid: str, main_id: int, sub_id: int, sub_sub_id: int,
+                       tool_name: str, open_: bool = False, version: str = None):
+        return Tools.create(appid=appid, main_id=main_id, sub_id=sub_id, sub_sub_id=sub_sub_id, tool_name=tool_name,
+                            open=open_, version=version)
+
+    @staticmethod
+    async def update_tool(id_: int, open_: bool = None, version: str = None):
+        tool = Tools.get_or_none(Tools.id == id_)
+        if tool:
+            if open_ is not None:
+                tool.open = open_
+            if version is not None:
+                tool.version = version
+            return tool.save()
+        else:
+            return None
+
+    @staticmethod
+    async def get_tool(appid: str, main_id: int, sub_id: int, sub_sub_id: int):
+        return Tools.get_or_none(Tools.appid == appid, Tools.main_id == main_id, Tools.sub_id == sub_id,
+                                 Tools.sub_sub_id == sub_sub_id)
+
+    @staticmethod
+    async def update_channel_tool(tool_id: int, channel_id: str, open_: bool):
+        channel_tool = ToolsConfig.get_or_none(ToolsConfig.tool_id == tool_id, ToolsConfig.channel_id == channel_id)
+        if channel_tool:
+            channel_tool.open = open_
+            return channel_tool.save()
+        else:
+            return ToolsConfig.create(tool_id=tool_id, channel_id=channel_id, open=open_)
+
+    @staticmethod
+    async def get_channel_tool(tool_id: int, channel_id: str):
+        return ToolsConfig.get_or_none(ToolsConfig.tool_id == tool_id, ToolsConfig.channel_id == channel_id)

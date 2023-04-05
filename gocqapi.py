@@ -1,9 +1,10 @@
 import json
+import os
 import random
 
 from amiyabot import Event
 from amiyabot.adapters.common import CQCode
-from amiyabot.adapters.cqhttp import CQHttpBotInstance
+from amiyabot.adapters.cqhttp import CQHttpBotInstance, log
 from amiyabot.builtin.message import Message
 from amiyabot.builtin.messageChain import Chain
 from amiyabot.network.download import download_async
@@ -44,6 +45,9 @@ class GOCQHttpHelper:
 
     async def delete_msg(self, message_id: int):
         return await self.post('/delete_msg', {'message_id': message_id})
+
+    async def get_group_member_list(self, group_id: int):
+        return await self.get('/get_group_member_list', {'group_id': group_id})
 
     async def get_group_member_info(self, group_id: int, user_id: int, no_cache: bool = False):
         return await self.post('/get_group_member_info',
@@ -106,6 +110,17 @@ class GOCQTools:
                         flag = True
                     id_ = int(m0[i].split(' ')[1].split(']')[0])
                     message = message.face(id_)
+                elif m0[i] == '[emoji]':
+                    if not flag:
+                        message = Chain()
+                        flag = True
+                    image_path = config_['poke']['emojiPath']
+                    image_list = os.listdir(image_path)
+                    if len(image_list) == 0:
+                        continue
+                    image = random.choice(image_list)
+                    image = f'{os.path.dirname(__file__)}/../../{image_path}/{image}'
+                    message = message.image(image)
                 else:
                     if not flag:
                         message = Chain()
@@ -169,6 +184,14 @@ class GOCQTools:
         result = json.loads(res)
         if result['status'] == 'ok':
             return True
+        else:
+            return False
+
+    async def get_group_member_list(self, group_id: int):
+        res = await self.helper.get_group_member_list(group_id)
+        result = json.loads(res)
+        if result['status'] == 'ok':
+            return result['data']
         else:
             return False
 

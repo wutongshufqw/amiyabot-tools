@@ -10,6 +10,29 @@ request_headers = {
     'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8',
     'Content-Type': 'application/json;charset=UTF-8'
 }
+tools = [
+    {'main_id': 1, 'sub_id': 1, 'sub_sub_id': 1, 'name': '戳一戳'},
+    {'main_id': 1, 'sub_id': 1, 'sub_sub_id': 2, 'name': '今日菜单'},
+    {'main_id': 1, 'sub_id': 1, 'sub_sub_id': 3, 'name': '小小AI'},
+    {'main_id': 1, 'sub_id': 1, 'sub_sub_id': 4, 'name': 'sauceNAO'},
+    {'main_id': 1, 'sub_id': 1, 'sub_sub_id': 5, 'name': '伪造消息'},
+    {'main_id': 1, 'sub_id': 1, 'sub_sub_id': 6, 'name': '一些小功能'},
+    {'main_id': 1, 'sub_id': 1, 'sub_sub_id': 7, 'name': '兔兔抽奖'},
+
+    {'main_id': 1, 'sub_id': 2, 'sub_sub_id': 1, 'name': '扫雷'},
+    {'main_id': 1, 'sub_id': 2, 'sub_sub_id': 2, 'name': '五子棋'},
+
+    {'main_id': 1, 'sub_id': 3, 'sub_sub_id': 1, 'name': '修改群名片'},
+    {'main_id': 1, 'sub_id': 3, 'sub_sub_id': 2, 'name': '修改群头衔'},
+    {'main_id': 1, 'sub_id': 3, 'sub_sub_id': 3, 'name': '兔兔撤回'},
+    {'main_id': 1, 'sub_id': 3, 'sub_sub_id': 4, 'name': '入群欢迎'},
+
+
+    {'main_id': 2, 'sub_id': 1, 'sub_sub_id': 1, 'name': '兔兔重启'},
+    {'main_id': 2, 'sub_id': 1, 'sub_sub_id': 2, 'name': '好友申请'},
+    {'main_id': 2, 'sub_id': 1, 'sub_sub_id': 3, 'name': '群邀请'},
+    {'main_id': 2, 'sub_id': 1, 'sub_sub_id': 4, 'name': '卡池图片更新'},
+]
 
 
 def get_url(id_):

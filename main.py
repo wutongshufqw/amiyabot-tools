@@ -21,8 +21,9 @@ from lxml import etree
 
 from core import bot as main_bot, GitAutomation
 from core.database.bot import *
-from core.database.user import UserInfo
+from core.database.user import UserInfo, UserGachaInfo
 from core.util import create_dir, read_yaml
+from .config import tools
 from .gocqapi import GOCQTools
 from .miraiapi import MiraiTools
 from .sauceNAO import get_saucenao
@@ -40,13 +41,15 @@ recall_list = []
 class BottleFlowPluginInstance(PluginInstance):
     def install(self):
         config_install()
+        config_ = read_yaml(config_file, _dict=True)
         remove_dir(avatar_dir)
         create_dir(avatar_dir)
+        create_dir(config_['poke']['emojiPath'])
 
 
 bot = BottleFlowPluginInstance(
     name='小工具合集',
-    version='1.6.0',
+    version='1.7.0',
     plugin_id='amiyabot-tools',
     plugin_type='tools',
     description='AmiyaBot小工具合集 By 天基',
@@ -112,9 +115,15 @@ def config_install():
                 '[pixiv]喏',
                 '不准戳我啦[face 175]',
                 '[poke]'
-            ]
+                '[emoji]'
+            ],
+            'emojiPath': 'resource/plugins/tools/emoji'
         }
         add_dict('poke', data)
+    if config_ is not None and config_.get('poke').get('emojiPath') is None:
+        data = config_['poke']
+        data['emojiPath'] = 'resource/plugins/tools/emoji'
+        edit_dict('poke', data)
     if config_ is None or config_.get('specialTitle') is None:  # 修改群头衔配置初始化
         data = {
             'cd': 1800,
@@ -138,6 +147,15 @@ def config_install():
             'proxy': None,
         }
         add_dict('sauceNAO', data)
+    if config_ is None or config_.get('lottery') is None:  # 抽奖配置初始化
+        data = {
+            'open': False,
+            'day': 1,
+            'times': 3,
+            'coupon': 100,
+            'probability': 0.1
+        }
+        add_dict('lottery', data)
 
 
 def get_cooldown(flag, map_: dict):
@@ -153,9 +171,143 @@ def set_cooldown(flag, map_, cd: int):
     map_[flag] = time.time() + cd
 
 
+async def update_tools(data: Message):
+    tool_list = await SQLHelper.get_tools_list(data.instance.appid)
+    if tool_list is None or len(tool_list) == 0:
+        for t in tools:
+            await SQLHelper.add_tool(data.instance.appid, t['main_id'], t['sub_id'], t['sub_sub_id'], t['name'],
+                                     False, bot.version)
+    elif tool_list[0].version != bot.version:
+        for t in tools:
+            flag = True
+            for t1 in tool_list:
+                if t['main_id'] == t1['main_id'] and t['sub_id'] == t1['sub_id'] and t['sub_sub_id'] == t1[
+                    'sub_sub_id']:
+                    await SQLHelper.update_tool(t1.id, version=bot.version)
+                    flag = False
+                    break
+            if flag:
+                await SQLHelper.add_tool(data.instance.appid, t['main_id'], t['sub_id'], t['sub_sub_id'], t['name'],
+                                         False, bot.version)
+    return
+
+
+async def tool_is_close(appid: str, main_id: int, sub_id: int, sub_sub_id: int, channel_id: str = None) -> bool:
+    tool = await SQLHelper.get_tool(appid, main_id, sub_id, sub_sub_id)
+    flag = False
+    if tool is not None and tool.open:
+        if channel_id is not None:
+            ctl = await SQLHelper.get_channel_tool(tool.id, channel_id)
+            flag = True if ctl is None else ctl.open
+        else:
+            flag = True
+    return not flag
+
+
+# 功能管理
+@bot.on_message(keywords=['小工具全局管理'], direct_only=True, level=5)
+async def tools_manage(data: Message):
+    if bool(Admin.get_or_none(account=data.user_id)):
+        await update_tools(data)
+        limit_time = time.time() + 60
+        flag = True
+        tool_list = await SQLHelper.get_tools_list(data.instance.appid)
+        msg = Chain(data)
+        text = '功能列表：\n'
+        for i in range(len(tool_list)):
+            text += f"{i}. {tool_list[i].tool_name} {'[已开启]' if tool_list[i].open else '[已关闭]'}\n"
+        text += '请输入序号开启或关闭功能\n回复“退出”退出'
+        msg.text(text)
+        while True:
+            if flag:
+                reply = await data.wait(msg, True, int(limit_time - time.time()))
+                flag = False
+            else:
+                reply = await data.wait(force=True, max_time=int(limit_time - time.time()))
+            if reply:
+                if reply.text == '退出':
+                    msg = Chain(data).text('已退出')
+                    await data.send(msg)
+                    break
+                pattern = re.compile(r'^\D*(\d+).*$')
+                match = pattern.match(reply.text_digits)
+                if match:
+                    index = int(match.group(1))
+                    if 0 <= index < len(tool_list):
+                        tool_list[index].open = not tool_list[index].open
+                        await SQLHelper.update_tool(tool_list[index].id, open_=tool_list[index].open)
+                        await data.send(Chain(data).text(
+                            f"已{'开启' if tool_list[index].open else '关闭'}{tool_list[index].tool_name}"))
+                        limit_time = time.time() + 60
+                    else:
+                        msg = Chain(data).text('输入序号有误')
+                        await data.send(msg)
+                        limit_time = time.time() + 60
+            else:
+                msg = Chain(data).text('已退出')
+                await data.send(msg)
+                break
+    return
+
+
+@bot.on_message(keywords=['小工具管理'], allow_direct=False, level=5)
+async def tools_manage_channel(data: Message):
+    if data.is_admin or bool(Admin.get_or_none(account=data.user_id)):
+        await update_tools(data)
+        limit_time = time.time() + 60
+        flag = True
+        tool_list = await SQLHelper.get_tools_list(data.instance.appid)
+        msg = Chain(data)
+        ctl = []
+        for t in tool_list:
+            if t.main_id == 1 and t.open:
+                tl = await SQLHelper.get_channel_tool(t.id, data.channel_id)
+                if tl is not None:
+                    t.open = tl.open
+                ctl.append(t)
+        text = '功能列表：\n'
+        for i in range(len(ctl)):
+            text += f"{i}. {ctl[i].tool_name} {'[已开启]' if ctl[i].open else '[已关闭]'}\n"
+        text += '请输入序号开启或关闭功能\n回复“退出”退出'
+        msg.text(text)
+        while True:
+            if flag:
+                reply = await data.wait(msg, True, int(limit_time - time.time()))
+                flag = False
+            else:
+                reply = await data.wait(force=True, max_time=int(limit_time - time.time()))
+            if reply:
+                if reply.text == '退出':
+                    msg = Chain(data).text('已退出')
+                    await data.send(msg)
+                    break
+                pattern = re.compile(r'^\D*(\d+).*$')
+                match = pattern.match(reply.text_digits)
+                if match:
+                    index = int(match.group(1))
+                    if 0 <= index < len(ctl):
+                        ctl[index].open = not ctl[index].open
+                        await SQLHelper.update_channel_tool(ctl[index].id, data.channel_id, open_=ctl[index].open)
+                        await data.send(
+                            Chain(data).text(f"已{'开启' if ctl[index].open else '关闭'}{ctl[index].tool_name}"))
+                        limit_time = time.time() + 60
+                    else:
+                        msg = Chain(data).text('输入序号有误')
+                        await data.send(msg)
+                        limit_time = time.time() + 60
+            else:
+                msg = Chain(data).text('已退出')
+                await data.send(msg)
+                break
+    return
+
+
 # 戳一戳
 @bot.on_event('NudgeEvent')  # Mirai戳一戳
 async def poke(event: Event, instance: MiraiBotInstance):
+    channel_id = event.data['subject']['id'] if event.data['subject']['kind'] == 'Group' else None
+    if await tool_is_close(instance.appid, 1, 1, 1, channel_id):
+        return
     config_ = read_yaml(config_file, _dict=True)
     if int(instance.appid) == event.data['target'] and config_['poke']['cd'] >= 0:
         if get_cooldown(event.data['subject']['id'], poke_cd) == 1:
@@ -163,11 +315,13 @@ async def poke(event: Event, instance: MiraiBotInstance):
         set_cooldown(event.data['subject']['id'], poke_cd, config_['poke']['cd'])
         mirai = MiraiTools(instance, event=event)
         await mirai.poke(config_)
-    return
 
 
 @bot.on_event('notice.notify.poke')  # gocq戳一戳
 async def poke(event: Event, instance: CQHttpBotInstance):
+    channel_id = event.data.get('group_id')
+    if await tool_is_close(instance.appid, 1, 1, 1, channel_id):
+        return
     config_ = read_yaml(config_file, _dict=True)
     if int(instance.appid) == event.data['target_id'] and config_['poke']['cd'] >= 0:
         if 'group_id' in event.data:
@@ -180,12 +334,13 @@ async def poke(event: Event, instance: CQHttpBotInstance):
             set_cooldown(event.data['sender_id'], poke_cd, config_['poke']['cd'])
         gocq = GOCQTools(instance, event=event)
         await gocq.poke(config_)
-    return
 
 
 # 今天吃什么
 @bot.on_message(keywords=['今天吃什么'], allow_direct=True, level=5)
 async def eat(data: Message):
+    if await tool_is_close(data.instance.appid, 1, 1, 2, data.channel_id):
+        return
     res = await http_requests.get('https://home.meishichina.com/show-top-type-recipe.html')
     html = etree.HTML(res)
     map_ = {}
@@ -216,6 +371,8 @@ async def eat(data: Message):
 # 人工智障
 @bot.on_message(keywords=['调整AI概率'], allow_direct=False, level=5)
 async def adjust_ai(data: Message):
+    if await tool_is_close(data.instance.appid, 1, 1, 3, data.channel_id):
+        return
     if data.is_admin or bool(Admin.get_or_none(account=data.user_id)):
         pattern = re.compile('^.*?调整AI概率\\D*?(\\d+)$', re.I)
         m = pattern.match(data.text_original)
@@ -255,6 +412,8 @@ def verify_prefix(msg: str):
 
 
 async def check_ai(data: Message):
+    if await tool_is_close(data.instance.appid, 1, 1, 3, data.channel_id):
+        return False, -1, False
     if data.is_at and '撤回' not in data.text_original and '兔兔chat' not in data.text_original:
         return True, 10, True
     msg = data.text_original
@@ -303,6 +462,8 @@ async def ai(data: Message):
 # 搜图
 @bot.on_message(keywords=['搜索图片'], allow_direct=False, level=5)
 async def search_image(data: Message):
+    if await tool_is_close(data.instance.appid, 1, 1, 4, data.channel_id):
+        return
     if data.image.__len__() == 0:
         return Chain(data).text('请发送图片')
     elif data.image.__len__() > 1:
@@ -330,6 +491,8 @@ async def search_image(data: Message):
 # 伪造消息
 @bot.on_message(keywords=['伪造消息'], allow_direct=False, level=5)
 async def fake_message(data: Message):
+    if await tool_is_close(data.instance.appid, 1, 1, 5, data.channel_id):
+        return
     fake = await SQLHelper.get_fake(data.instance.appid, data.channel_id)
     if fake and fake.open:
         if type(data.instance) is MiraiBotInstance:
@@ -407,6 +570,8 @@ async def fake_message(data: Message):
 
 @bot.on_message(keywords=['开启消息伪造', '关闭消息伪造'], allow_direct=False, level=5)
 async def fake_message_switch(data: Message):
+    if await tool_is_close(data.instance.appid, 1, 1, 5, data.channel_id):
+        return
     if data.is_admin or bool(Admin.get_or_none(account=data.user_id)):
         if '开启' in data.text_original:
             if await SQLHelper.set_fake(data.instance.appid, data.channel_id, True):
@@ -421,6 +586,8 @@ async def fake_message_switch(data: Message):
 # 各类API
 @bot.on_message(keywords=['每日一言', '猜谜'], allow_direct=True, level=5)
 async def api_handler(data: Message):
+    if await tool_is_close(data.instance.appid, 1, 1, 6, data.channel_id):
+        return
     if data.text_original.startswith("兔兔每日一言"):
         res = await http_requests.get('https://v.api.aa1.cn/api/yiyan/index.php')
         try:
@@ -492,9 +659,50 @@ async def api_handler(data: Message):
     return
 
 
+# 抽奖
+@bot.on_message(keywords=['抽奖'], allow_direct=False, level=5)
+async def lottery(data: Message):
+    if await tool_is_close(data.instance.appid, 1, 1, 7, data.channel_id):
+        return
+    config_ = read_yaml(config_file, _dict=True)
+    if config_.get('lottery') is not None and config_['lottery'].get('open'):
+        day = config_['lottery'].get('day')
+        times = config_['lottery'].get('times')
+        coupon = config_['lottery'].get('coupon')
+        probability = config_['lottery'].get('probability')
+        lottery_ = await SQLHelper.get_lottery(data.instance.appid, data.channel_id)
+        last_date = lottery_.date if lottery_.date else None
+        minus = float('inf') if last_date is None else (datetime.date.today() - last_date).days
+        # 计算剩余次数
+        if minus >= day:  # 更新抽奖周期
+            left = times
+            flag = True
+        else:  # 不更新抽奖周期
+            left = times - lottery_.times if lottery_.times else times
+            flag = False
+        if left > 0:
+            if random.random() <= probability:
+                if flag:
+                    await SQLHelper.set_lottery(lottery_.id, 1, datetime.date.today())
+                else:
+                    await SQLHelper.set_lottery(lottery_.id, lottery_.times + 1)
+                UserGachaInfo.get_or_create(user_id=data.user_id)
+                UserGachaInfo.update(
+                    coupon=UserGachaInfo.coupon + coupon
+                ).where(UserGachaInfo.user_id == data.user_id).execute()
+                return Chain(data).text(f'恭喜{data.nickname}获得了{coupon}寻访凭证！')
+            else:
+                return Chain(data).text(f'很遗憾，{data.nickname}没有抽中奖品！')
+        else:
+            return Chain(data, at=False).text(f'该周期中奖名额已满，下次再来吧！')
+    return
+
+
 # 扫雷
 @bot.on_message(keywords=['扫雷'], allow_direct=False, level=5)
 async def sweep_mine(data: Message):
+    if await tool_is_close(data.instance.appid, 1, 2, 1, data.channel_id):
+        return
     mode = "简单"
     # 难度设置
     settings = [9, 9, 10, 5]
@@ -664,8 +872,11 @@ async def sweep_mine(data: Message):
 # 五子棋
 @bot.on_message(keywords=['五子棋'], allow_direct=False, level=5)
 async def gomoku(data: Message):
+    if await tool_is_close(data.instance.appid, 1, 2, 2, data.channel_id):
+        return
     async def gomoku_filter1(data_: Message):
         return data_.text_original == '加入'
+
     time_limit = time.time() + 60
     event = await data.wait_channel(Chain(data).text('发起了一局五子棋对局, 请黑方在60s内输入"加入"加入对局'), True,
                                     True, int(time_limit - time.time()), gomoku_filter1)
@@ -759,7 +970,8 @@ async def gomoku(data: Message):
                                 event.close_event()
                                 remove_file(file_path1)
                                 remove_file(file_path2)
-                                await data.send(Chain(data, at=False).text(f'{name1 if flag == "black" else name2} 赢了!'))
+                                await data.send(
+                                    Chain(data, at=False).text(f'{name1 if flag == "black" else name2} 赢了!'))
                 for i in range(col - 4, col + 5):
                     if 0 <= i <= 10:
                         if chess[row][i] == flag:
@@ -772,7 +984,8 @@ async def gomoku(data: Message):
                                 event.close_event()
                                 remove_file(file_path1)
                                 remove_file(file_path2)
-                                await data.send(Chain(data, at=False).text(f'{name1 if flag == "black" else name2} 赢了!'))
+                                await data.send(
+                                    Chain(data, at=False).text(f'{name1 if flag == "black" else name2} 赢了!'))
                                 return
                 for i in range(-4, 5):
                     if 0 <= row + i <= 10 and 0 <= col + i <= 10:
@@ -786,7 +999,8 @@ async def gomoku(data: Message):
                                 event.close_event()
                                 remove_file(file_path1)
                                 remove_file(file_path2)
-                                await data.send(Chain(data, at=False).text(f'{name1 if flag == "black" else name2} 赢了!'))
+                                await data.send(
+                                    Chain(data, at=False).text(f'{name1 if flag == "black" else name2} 赢了!'))
                                 return
                 for i in range(-4, 5):
                     if 0 <= row + i <= 10 and 0 <= col - i <= 10:
@@ -800,7 +1014,8 @@ async def gomoku(data: Message):
                                 event.close_event()
                                 remove_file(file_path1)
                                 remove_file(file_path2)
-                                await data.send(Chain(data, at=False).text(f'{name1 if flag == "black" else name2} 赢了!'))
+                                await data.send(
+                                    Chain(data, at=False).text(f'{name1 if flag == "black" else name2} 赢了!'))
                                 return
                 flag = 'black' if flag == 'white' else 'white'
             else:
@@ -812,6 +1027,8 @@ async def gomoku(data: Message):
 # 修改群名片&群头衔
 @bot.on_message(keywords=['修改群名片'], allow_direct=False, level=5)
 async def set_group_card(data: Message):
+    if await tool_is_close(data.instance.appid, 1, 3, 1, data.channel_id):
+        return
     if data.is_admin or bool(Admin.get_or_none(account=data.user_id)):
         msg = data.text_original.split(' ')
         if msg.__len__() == 1:
@@ -844,6 +1061,8 @@ async def set_group_card(data: Message):
 
 @bot.on_message(keywords=['修改群头衔'], allow_direct=False, level=5)
 async def set_group_special_title(data: Message):
+    if await tool_is_close(data.instance.appid, 1, 3, 2, data.channel_id):
+        return
     config_ = read_yaml(config_file, _dict=True)
     flag = 'deny'
     if bool(Admin.get_or_none(account=data.user_id)):
@@ -892,6 +1111,8 @@ async def set_group_special_title(data: Message):
 # 撤回消息
 @bot.on_message(keywords=['撤回'], allow_direct=True, level=5)
 async def recall(data: Message):
+    if await tool_is_close(data.instance.appid, 1, 3, 3, data.channel_id):
+        return
     if data.is_admin or bool(Admin.get_or_none(account=data.user_id)):
         if type(data.instance) is MiraiBotInstance:
             info = data.message['messageChain']
@@ -911,6 +1132,8 @@ async def recall(data: Message):
 # 群欢迎消息
 @bot.on_message(keywords=['设置欢迎消息'], allow_direct=False, level=5)
 async def set_welcome(data: Message):
+    if await tool_is_close(data.instance.appid, 1, 3, 4, data.channel_id):
+        return
     if data.is_admin or bool(Admin.get_or_none(account=data.user_id)):
         try:
             welcome = data.text_original.split(' ', 1)[1]
@@ -923,6 +1146,8 @@ async def set_welcome(data: Message):
 
 @bot.on_message(keywords=['清除欢迎消息'], allow_direct=False, level=5)
 async def clear_welcome(data: Message):
+    if await tool_is_close(data.instance.appid, 1, 3, 4, data.channel_id):
+        return
     if data.is_admin or bool(Admin.get_or_none(account=data.user_id)):
         await SQLHelper.delete_welcome(data.instance.appid, data.channel_id)
         return Chain(data).text('欢迎消息已清除')
@@ -931,6 +1156,8 @@ async def clear_welcome(data: Message):
 
 @bot.on_event('MemberJoinEvent')  # Mirai群成员入群
 async def member_join(event: Event, instance: MiraiBotInstance):
+    if await tool_is_close(instance.appid, 1, 3, 4, event.data['member']['group']['id']):
+        return
     message = await SQLHelper.get_welcome(instance.appid, event.data['member']['group']['id'])
     if message is not None:
         await instance.send_message(Chain().at(str(event.data['member']['id']), True).text(message.message),
@@ -940,6 +1167,8 @@ async def member_join(event: Event, instance: MiraiBotInstance):
 
 @bot.on_event('notice.group_increase')  # GOCQ群成员入群
 async def member_join(event: Event, instance: CQHttpBotInstance):
+    if await tool_is_close(instance.appid, 1, 3, 4, event.data['group_id']):
+        return
     message = await SQLHelper.get_welcome(instance.appid, event.data['group_id'])
     if message is not None:
         await instance.send_message(Chain().at(str(event.data['user_id']), True).text(message.message),
@@ -950,6 +1179,8 @@ async def member_join(event: Event, instance: CQHttpBotInstance):
 # 重启
 @bot.on_message(keywords=['重启'], direct_only=True, level=5)
 async def restart(data: Message):
+    if await tool_is_close(data.instance.appid, 2, 1, 1):
+        return
     config_ = read_yaml(config_file, _dict=True)
     if config_.get('restart') is not None and int(data.user_id) in config_['restart']:
         await data.send(Chain(data, at=False).text('重启中...'))
@@ -974,13 +1205,14 @@ async def restart_task(instance: BotHandlerFactory):
         for i in config_['restart']:
             for j in main_bot:
                 await j.send_message(Chain().text('兔兔启动成功或小工具插件安装成功！'), str(i))
-
     return
 
 
 # 好友申请
 @bot.on_event('NewFriendRequestEvent')  # Mirai新好友申请
 async def new_friend_request(event: Event, instance: MiraiBotInstance):
+    if await tool_is_close(instance.appid, 2, 1, 2):
+        return
     config_ = read_yaml(config_file, _dict=True)
     operator = config_['operator']
     if operator is None:
@@ -994,6 +1226,8 @@ async def new_friend_request(event: Event, instance: MiraiBotInstance):
 
 @bot.on_event('request.friend')  # GOCQ新好友申请
 async def new_friend_request(event: Event, instance: CQHttpBotInstance):
+    if await tool_is_close(instance.appid, 2, 1, 2):
+        return
     config_ = read_yaml(config_file, _dict=True)
     operator = config_['operator']
     if operator is None:
@@ -1007,6 +1241,8 @@ async def new_friend_request(event: Event, instance: CQHttpBotInstance):
 
 @bot.on_message(keywords=['同意好友', '拒绝好友', '拉黑好友'], direct_only=True, level=5)
 async def new_friend_request(data: Message):
+    if await tool_is_close(data.instance.appid, 2, 1, 2):
+        return
     config_ = read_yaml(config_file, _dict=True)
     if data.text_original.startswith('兔兔'):
         data.text_original = data.text_original.replace('兔兔', '', 1)
@@ -1069,6 +1305,8 @@ async def new_friend_request(data: Message):
 
 @bot.on_message(keywords=['查看好友申请'], direct_only=True, level=5)
 async def view_new_friends(data: Message):
+    if await tool_is_close(data.instance.appid, 2, 1, 2):
+        return
     config_ = read_yaml(config_file, _dict=True)
     if config_.get('operator') is not None and int(data.user_id) == config_['operator']:
         if type(data.instance) is MiraiBotInstance:
@@ -1124,6 +1362,8 @@ async def view_new_friends(data: Message):
 
 @bot.on_message(keywords=['清空好友申请'], allow_direct=True, level=5)
 async def clear_new_friends(data: Message):
+    if await tool_is_close(data.instance.appid, 2, 1, 2):
+        return
     config_ = read_yaml(config_file, _dict=True)
     if config_.get('operator') is not None and int(data.user_id) == config_['operator']:
         res = False
@@ -1142,6 +1382,8 @@ async def clear_new_friends(data: Message):
 # 群聊邀请
 @bot.on_event('BotInvitedJoinGroupRequestEvent')  # Mirai群聊邀请
 async def group_invite(event: Event, instance: MiraiBotInstance):
+    if await tool_is_close(instance.appid, 2, 1, 3):
+        return
     config_ = read_yaml(config_file, _dict=True)
     operator = config_['operator']
     if operator is None:
@@ -1156,6 +1398,8 @@ async def group_invite(event: Event, instance: MiraiBotInstance):
 
 @bot.on_event('request.group.invite')  # GOCQ群聊邀请
 async def group_invite(event: Event, instance: CQHttpBotInstance):
+    if await tool_is_close(instance.appid, 2, 1, 3):
+        return
     config_ = read_yaml(config_file, _dict=True)
     operator = config_['operator']
     if operator is None:
@@ -1168,6 +1412,8 @@ async def group_invite(event: Event, instance: CQHttpBotInstance):
 
 @bot.on_message(keywords=['同意邀请', '拒绝邀请'], allow_direct=True, level=5)
 async def group_invite(data: Message):
+    if await tool_is_close(data.instance.appid, 2, 1, 3):
+        return
     config_ = read_yaml(config_file, _dict=True)
     if data.text_original.startswith('兔兔'):
         data.text_original = data.text_original.replace('兔兔', '', 1)
@@ -1233,6 +1479,8 @@ async def group_invite(data: Message):
 
 @bot.on_message(keywords=['查看邀请'], allow_direct=True, level=5)
 async def view_group_invites(data: Message):
+    if await tool_is_close(data.instance.appid, 2, 1, 3):
+        return
     config_ = read_yaml(config_file, _dict=True)
     if config_.get('operator') is not None and int(data.user_id) == config_['operator']:
         if type(data.instance) is MiraiBotInstance:
@@ -1288,6 +1536,8 @@ async def view_group_invites(data: Message):
 
 @bot.on_message(keywords=['清空邀请'], allow_direct=True, level=5)
 async def clear_new_friends(data: Message):
+    if await tool_is_close(data.instance.appid, 2, 1, 3):
+        return
     config_ = read_yaml(config_file, _dict=True)
     if config_.get('operator') is not None and int(data.user_id) == config_['operator']:
         res = False
@@ -1304,13 +1554,15 @@ async def clear_new_friends(data: Message):
 
 
 async def verify_gacha(data: Message):
+    if await tool_is_close(data.instance.appid, 2, 1, 4):
+        return False, 0
     if '更新卡池图片' in data.text_original:
         return True, 5
     else:
         return False, 0
 
 
-@bot.on_message(verify=verify_gacha, direct_only=True)
+@bot.on_message(verify=verify_gacha)
 async def update_gacha_pool(data: Message):
     if bool(Admin.get_or_none(account=data.user_id)):
         await data.send(Chain(data).text('开始更新卡池图片...'))

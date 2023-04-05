@@ -1,4 +1,5 @@
 import json
+import os
 import random
 
 from amiyabot import Event
@@ -57,6 +58,9 @@ class MiraiHttpHelper:
 
     async def recall(self, target: int, message_id: int):
         return await self.post('/recall', {'sessionKey': self.session, 'target': target, 'messageId': message_id})
+
+    async def member_list(self, target: int):
+        return await self.get('/memberList', {'sessionKey': self.session, 'target': target})
 
     async def member_profile(self, target: int, member_id: int):
         return await self.get('/memberProfile', {'sessionKey': self.session, 'target': target, 'memberId': member_id})
@@ -117,6 +121,17 @@ class MiraiTools:
                         flag = True
                     id_ = int(m0[i].split(' ')[1].split(']')[0])
                     message = message.face(id_)
+                elif m0[i] == '[emoji]':
+                    if not flag:
+                        message = Chain()
+                        flag = True
+                    image_path = config_['poke']['emojiPath']
+                    image_list = os.listdir(image_path)
+                    if len(image_list) == 0:
+                        continue
+                    image = random.choice(image_list)
+                    image = f'{os.path.dirname(__file__)}/../../{image_path}/{image}'
+                    message = message.image(image)
                 else:
                     if not flag:
                         message = Chain()
@@ -188,6 +203,14 @@ class MiraiTools:
             if result['code'] == 0:
                 return True
         return False
+
+    async def get_group_member_list(self, target: int):
+        res = await self.helper.member_list(target)
+        result = json.loads(res)
+        if result['code'] == 0:
+            return result['data']
+        else:
+            return False
 
     async def get_group_member_info(self, target: int, member_id: int):
         res = await self.helper.member_profile(target, member_id)
