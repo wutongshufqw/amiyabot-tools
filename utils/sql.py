@@ -1,11 +1,13 @@
 import datetime
+import os
 import time
+from typing import Union
 
 from amiyabot.database import *
 
-from core.database import config, is_mysql
+from ..config import bottle_dir
 
-db = connect_database('tools' if is_mysql else 'resource/plugins/tools/tools.db', is_mysql, config)
+db = connect_database('resource/plugins/tools/tools.db')
 
 
 class ToolsBaseModel(ModelClass):
@@ -16,15 +18,15 @@ class ToolsBaseModel(ModelClass):
 @table
 class NewFriends(ToolsBaseModel):
     # Common
-    id: int = IntegerField(primary_key=True)
+    id: int = AutoField()
     appid: int = IntegerField()
     adapter: str = CharField()
     date: int = IntegerField()
+    nickname: str = CharField()
     # Mirai
     event_id: int = IntegerField(null=True)
     from_id: int = IntegerField(null=True)
     group_id: int = IntegerField(null=True)
-    nick: str = CharField(null=True)
     message: str = CharField(null=True)
     # Gocq
     flag: str = CharField(null=True)
@@ -35,7 +37,7 @@ class NewFriends(ToolsBaseModel):
 @table
 class GroupInvite(ToolsBaseModel):
     # Common
-    id: int = IntegerField(primary_key=True)
+    id: int = AutoField()
     appid: int = IntegerField()
     adapter: str = CharField()
     date: int = IntegerField()
@@ -54,7 +56,7 @@ class GroupInvite(ToolsBaseModel):
 
 @table
 class AiBot(ToolsBaseModel):
-    id: int = IntegerField(primary_key=True)
+    id: int = AutoField()
     appid: int = IntegerField()
     channel_id: str = CharField()
     random: int = IntegerField()
@@ -62,7 +64,7 @@ class AiBot(ToolsBaseModel):
 
 @table
 class Welcome(ToolsBaseModel):
-    id: int = IntegerField(primary_key=True)
+    id: int = AutoField()
     appid: int = IntegerField()
     channel_id: str = CharField()
     message: str = CharField()
@@ -70,7 +72,7 @@ class Welcome(ToolsBaseModel):
 
 @table
 class Fake(ToolsBaseModel):
-    id: int = IntegerField(primary_key=True)
+    id: int = AutoField()
     appid: int = IntegerField()
     channel_id: str = CharField()
     open: bool = BooleanField()
@@ -78,7 +80,7 @@ class Fake(ToolsBaseModel):
 
 @table
 class Lottery(ToolsBaseModel):
-    id: int = IntegerField(primary_key=True)
+    id: int = AutoField()
     appid: int = IntegerField()
     channel_id: str = CharField()
     date: datetime.date = DateField(null=True)
@@ -87,7 +89,7 @@ class Lottery(ToolsBaseModel):
 
 @table
 class Tools(ToolsBaseModel):
-    id: int = IntegerField(primary_key=True)
+    id: int = AutoField()
     main_id: int = IntegerField()
     sub_id: int = IntegerField()
     sub_sub_id: int = IntegerField()
@@ -99,16 +101,54 @@ class Tools(ToolsBaseModel):
 
 @table
 class ToolsConfig(ToolsBaseModel):
-    id: int = IntegerField(primary_key=True)
+    id: int = AutoField()
     tool_id: int = IntegerField()
     channel_id: str = CharField()
     open: bool = BooleanField()
 
 
+@table
+class TodayWife(ToolsBaseModel):
+    id: int = AutoField()
+    appid: int = IntegerField()
+    channel_id: int = IntegerField()
+    user_id: int = IntegerField()
+    wife_id: int = IntegerField()
+    nickname: str = CharField()
+    date: datetime.date = DateField()
+
+
+@table
+class Caiyun(ToolsBaseModel):
+    id: int = AutoField()
+    user_id: int = IntegerField()
+    apikey: int = IntegerField()
+    model: int = IntegerField(default=1)
+
+
+@table
+class BottleFlow(ToolsBaseModel):
+    id: int = AutoField()
+    text: str = CharField(max_length=4096, null=True)
+    picture: str = CharField(null=True)
+    user_id: int = IntegerField()
+    user_name: str = CharField()
+    anonymous: bool = BooleanField()
+    time: int = IntegerField()
+    check: bool = BooleanField(default=False)
+
+
+@table
+class BottlePicture(ToolsBaseModel):
+    id: int = AutoField()
+    picture: str = CharField(unique=True)
+    count: int = IntegerField(default=1)
+
+
 class SQLHelper:
     @staticmethod
-    async def add_friend(appid: str, adapter: str, event_id: int = None, from_id: int = None, group_id: int = None,
-                         nick: str = None, message: str = None, flag: str = None, user_id: int = None,
+    async def add_friend(appid: str, adapter: str, nickname: str, event_id: int = None, from_id: int = None,
+                         group_id: int = None, message: str = None, flag: str = None, user_id: int = None,
                          comment: str = None):
         date = int(time.time())
         friend = NewFriends.get_or_none(NewFriends.appid == appid, NewFriends.adapter == adapter,
@@ -118,14 +158,14 @@ class SQLHelper:
             friend.event_id = event_id
             friend.from_id = from_id
             friend.group_id = group_id
-            friend.nick = nick
+            friend.nickname = nickname
             friend.message = message
             friend.flag = flag
             friend.comment = comment
             friend.save()
         else:
-            NewFriends.create(appid=appid, adapter=adapter, date=date, event_id=event_id, from_id=from_id,
-                              group_id=group_id, nick=nick, message=message, flag=flag, user_id=user_id,
+            NewFriends.create(appid=appid, adapter=adapter, date=date, nickname=nickname, event_id=event_id,
+                              from_id=from_id, group_id=group_id, message=message, flag=flag, user_id=user_id,
                               comment=comment)
 
     @staticmethod
@@ -252,7 +292,8 @@ class SQLHelper:
 
     @staticmethod
     async def get_tools_list(appid: str):
-        return Tools.select().where(Tools.appid == appid)
+        return Tools.select().where(Tools.appid == appid).order_by(Tools.main_id.asc(), Tools.sub_id.asc(),
+                                                                   Tools.sub_sub_id.asc())
 
     @staticmethod
     async def add_tool(appid: str, main_id: int, sub_id: int, sub_sub_id: int,
@@ -261,13 +302,15 @@ class SQLHelper:
                             open=open_, version=version)
 
     @staticmethod
-    async def update_tool(id_: int, open_: bool = None, version: str = None):
+    async def update_tool(id_: int, open_: bool = None, version: str = None, name: str = None):
         tool = Tools.get_or_none(Tools.id == id_)
         if tool:
             if open_ is not None:
                 tool.open = open_
             if version is not None:
                 tool.version = version
+            if name is not None:
+                tool.tool_name = name
             return tool.save()
         else:
             return None
@@ -289,3 +332,132 @@ class SQLHelper:
     @staticmethod
     async def get_channel_tool(tool_id: int, channel_id: str):
         return ToolsConfig.get_or_none(ToolsConfig.tool_id == tool_id, ToolsConfig.channel_id == channel_id)
+
+    @staticmethod
+    async def get_today_wife(appid: int, channel_id: int, user_id: int):
+        return TodayWife.get_or_none(TodayWife.appid == appid, TodayWife.channel_id == channel_id,
+                                     TodayWife.user_id == user_id, TodayWife.date == datetime.date.today())
+
+    @staticmethod
+    async def set_today_wife(appid: int, channel_id: int, user_id: int, wife_id: int, nickname: str):
+        wife = TodayWife.get_or_none(TodayWife.appid == appid, TodayWife.channel_id == channel_id,
+                                     TodayWife.user_id == user_id)
+        if wife:
+            wife.wife_id = wife_id
+            wife.nickname = nickname
+            wife.date = datetime.date.today()
+            return wife.save()
+        else:
+            return TodayWife.create(appid=appid, channel_id=channel_id, user_id=user_id, wife_id=wife_id,
+                                    nickname=nickname, date=datetime.date.today())
+
+    @staticmethod
+    async def set_caiyun_apikey(user_id: int, apikey: int):
+        caiyun = Caiyun.get_or_none(Caiyun.user_id == user_id)
+        if caiyun:
+            caiyun.apikey = apikey
+            return caiyun.save()
+        else:
+            return Caiyun.create(user_id=user_id, apikey=apikey)
+
+    @staticmethod
+    async def set_caiyun_model(user_id: int, model: int):
+        caiyun = Caiyun.get_or_none(Caiyun.user_id == user_id)
+        if caiyun:
+            caiyun.model = model
+            return caiyun.save()
+        else:
+            return False
+
+    @staticmethod
+    async def get_caiyun_info(user_id: int):
+        return Caiyun.get_or_none(Caiyun.user_id == user_id)
+
+    @staticmethod
+    async def delete_caiyun_info(user_id: int):
+        return Caiyun.delete().where(Caiyun.user_id == user_id).execute()
+
+    @staticmethod
+    async def create_bottle(user_id: int, user_name: str, anonymous: bool, max_bottle: int, time_: int,
+                            text: Union[str, None] = None, picture: Union[str, None] = None, check: bool = False):
+        res = None
+        if max_bottle < 0:
+            res = BottleFlow.create(user_id=user_id, user_name=user_name, anonymous=anonymous, time=time_, text=text,
+                                    picture=picture, check=check)
+        elif max_bottle == 0:
+            pass
+        else:
+            count = BottleFlow.select().where(BottleFlow.check == False).count()
+            if count < max_bottle:
+                res = BottleFlow.create(user_id=user_id, user_name=user_name, anonymous=anonymous, time=time_,
+                                        text=text, picture=picture, check=check)
+            else:
+                if check:
+                    res = BottleFlow.create(user_id=user_id, user_name=user_name, anonymous=anonymous, time=time_,
+                                            text=text, picture=picture, check=check)
+                else:
+                    while count >= max_bottle:
+                        bottle = BottleFlow.select().where(BottleFlow.check == False).order_by(BottleFlow.time.asc())\
+                            .first()
+                        await SQLHelper.delete_bottle_by_id(bottle.id)
+                        count -= 1
+                    res = BottleFlow.create(user_id=user_id, user_name=user_name, anonymous=anonymous, time=time_,
+                                            text=text, picture=picture, check=check)
+        if res and picture:
+            pictures = picture.split(';')
+            for pic in pictures:
+                exist = BottlePicture.get_or_none(BottlePicture.picture == pic)
+                if exist:
+                    exist.count += 1
+                    exist.save()
+                else:
+                    BottlePicture.create(picture=pic)
+        return res
+
+    @staticmethod
+    async def get_random_bottle():
+        return BottleFlow.select().where(BottleFlow.check == False).order_by(fn.Random()).first()
+
+    @staticmethod
+    async def delete_all_bottle():
+        bottles = BottleFlow.select().where(BottleFlow.check == False)
+        for bottle in bottles:
+            await SQLHelper.delete_bottle_by_id(bottle.id)
+
+    @staticmethod
+    async def get_bottle_by_id(id_: int):
+        return BottleFlow.get_or_none(BottleFlow.id == id_)
+
+    @staticmethod
+    async def delete_bottle_by_id(id_: int):
+        bottle = BottleFlow.get_or_none(BottleFlow.id == id_)
+        if bottle:
+            if bottle.picture:
+                pictures = bottle.picture.split(';')
+                for pic in pictures:
+                    exist = BottlePicture.get_or_none(BottlePicture.picture == pic)
+                    if exist:
+                        exist.count -= 1
+                        if exist.count <= 0:
+                            path = f'{bottle_dir}{pic}'
+                            if os.path.exists(path):
+                                os.remove(path)
+                            exist.delete_instance()
+                        exist.save()
+            bottle.delete_instance()
+            return True
+        else:
+            return False
+
+    @staticmethod
+    async def pass_bottle_by_id(id_: int):
+        bottle = BottleFlow.get_or_none(BottleFlow.id == id_)
+        if bottle:
+            bottle.check = False
+            return bottle.save()
+        else:
+            return False
+
+    @staticmethod
+    async def get_check_bottles():
+        return BottleFlow.select().where(BottleFlow.check == True).order_by(BottleFlow.time.asc())

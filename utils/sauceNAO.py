@@ -108,7 +108,7 @@ async def get_saucenao(imageURL, api_key: str, proxy: str = None):
 
     process_results = True
     while True:
-        if proxy:
+        if proxy != 'proxy url':
             r = await run_in_thread_pool(requests.post, url, files=files,
                                          proxies={'http': 'http://' + proxy, 'https': 'http://' + proxy})
         else:

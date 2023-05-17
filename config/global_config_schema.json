@@ -1,0 +1,298 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "required": [],
+    "properties": {
+        "functions": {
+            "title": "功能加载项",
+            "description": "功能加载项配置, 注意, 该配置项是从代码层面实现配置项的动态加载, 因此修改后需要重新启动兔兔才会生效, 此配置项优先级高于小工具全局管理",
+            "type": "object",
+            "required": [
+                "default",
+                "emoji",
+                "game",
+                "group",
+                "admin"
+            ],
+            "properties": {
+                "default": {
+                    "title": "互动",
+                    "description": "互动功能",
+                    "type": "boolean"
+                },
+                "emoji": {
+                    "title": "表情包",
+                    "description": "表情包功能",
+                    "type": "boolean"
+                },
+                "game": {
+                    "title": "游戏",
+                    "description": "游戏功能",
+                    "type": "boolean"
+                },
+                "group": {
+                    "title": "群管理",
+                    "description": "群管理功能",
+                    "type": "boolean"
+                },
+                "admin": {
+                    "title": "管理员",
+                    "description": "管理员功能",
+                    "type": "boolean"
+                }
+            }
+        },
+        "poke": {
+            "title": "戳一戳配置",
+            "description": "配置兔兔戳一戳",
+            "type": "object",
+            "required": [
+                "cd",
+                "emojiPath",
+                "replies"
+            ],
+            "properties": {
+                "cd": {
+                    "title": "戳一戳冷却",
+                    "description": "戳一戳冷却时间",
+                    "type": "integer",
+                    "minimum": -1
+                },
+                "emojiPath": {
+                    "title": "表情包路径",
+                    "description": "回复表情包路径",
+                    "type": "string"
+                },
+                "replies": {
+                    "title": "回复列表",
+                    "description": "戳一戳回复消息列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "sauceNAO": {
+            "title": "SauceNAO",
+            "description": "SauceNAO配置",
+            "type": "object",
+            "properties": {
+                "api_key": {
+                    "title": "API Key",
+                    "description": "SauceNAO API Key",
+                    "type": "string"
+                },
+                "proxy": {
+                    "title": "代理",
+                    "description": "SauceNAO代理, 形如127.0.0.1:11451",
+                    "type": "string"
+                }
+            }
+        },
+        "lottery": {
+            "title": "抽奖配置",
+            "description": "配置兔兔抽奖",
+            "type": "object",
+            "required": [
+                "coupon",
+                "day",
+                "probability",
+                "times"
+            ],
+            "properties": {
+                "coupon": {
+                    "title": "寻访凭证",
+                    "description": "中奖获得的寻访凭证数量",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "day": {
+                    "title": "刷新周期",
+                    "description": "抽奖名额刷新间隔",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "probability": {
+                    "title": "中奖概率",
+                    "description": "中奖概率",
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                },
+                "times": {
+                    "title": "抽奖次数",
+                    "description": "每周期抽奖次数",
+                    "type": "integer",
+                    "minimum": 0
+                }
+            }
+        },
+        "emoji": {
+            "title": "头像表情包",
+            "description": "表情包配置",
+            "type": "object",
+            "required": [
+                "tips"
+            ],
+            "properties": {
+                "tips": {
+                    "title": "提示",
+                    "description": "错误提示",
+                    "type": "boolean"
+                }
+            }
+        },
+        "avatar": {
+            "title": "头像生成",
+            "description": "配置头像生成",
+            "type": "object",
+            "required": [
+                "proxy"
+            ],
+            "properties": {
+                "proxy": {
+                    "title": "代理配置",
+                    "description": "形如127.0.0.1:11451",
+                    "type": "string"
+                }
+            }
+        },
+        "bottle": {
+            "title": "漂流瓶",
+            "description": "漂流瓶配置",
+            "type": "object",
+            "required": [
+                "max",
+                "notip",
+                "destroy",
+                "self",
+                "picture",
+                "check"
+            ],
+            "properties": {
+                "max": {
+                    "title": "最大数量",
+                    "description": "最大漂流瓶数量",
+                    "type": "integer",
+                    "minimum": -1
+                },
+                "black": {
+                    "title": "黑名单",
+                    "description": "词汇黑名单",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "notip": {
+                    "title": "提示信息",
+                    "description": "未见到漂流瓶时的提示",
+                    "type": "string"
+                },
+                "destroy": {
+                    "title": "销毁",
+                    "description": "是否在捡到漂流瓶后直接删除",
+                    "type": "boolean"
+                },
+                "self": {
+                    "title": "自己",
+                    "description": "是否允许自己捡起自己的漂流瓶",
+                    "type": "boolean"
+                },
+                "picture": {
+                    "title": "图片",
+                    "description": "是否允许发送图片",
+                    "type": "boolean"
+                },
+                "check": {
+                    "title": "审核",
+                    "description": "是否开启审核",
+                    "type": "object",
+                    "required": [
+                        "enable"
+                    ],
+                    "properties": {
+                        "enable": {
+                            "title": "是否开启",
+                            "description": "是否开启审核",
+                            "type": "boolean"
+                        },
+                        "appid": {
+                            "title": "实例ID",
+                            "description": "负责处理审核消息的实例QQ",
+                            "type": "integer"
+                        },
+                        "group": {
+                            "title": "审核群",
+                            "description": "审核群号",
+                            "type": "integer"
+                        }
+                    }
+                }
+            }
+        },
+        "specialTitle": {
+            "title": "群头衔",
+            "description": "群头衔配置",
+            "type": "object",
+            "required": [
+                "admin",
+                "cd",
+                "guest"
+            ],
+            "properties": {
+                "admin": {
+                    "title": "管理员",
+                    "description": "是否启用管理员",
+                    "type": "boolean"
+                },
+                "cd": {
+                    "title": "冷却",
+                    "description": "修改冷却时间",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "guest": {
+                    "title": "访客",
+                    "description": "是否启用访客",
+                    "type": "boolean"
+                }
+            }
+        },
+        "restart": {
+            "title": "重启",
+            "description": "重启实例的管理员账号",
+            "type": "array",
+            "items": {
+                "type": "integer"
+            }
+        },
+        "operators": {
+            "title": "操作员",
+            "description": "操作员配置",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "appid",
+                    "operator"
+                ],
+                "properties": {
+                    "appid": {
+                        "title": "实例ID",
+                        "description": "实例QQ号",
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "operator": {
+                        "title": "操作员ID",
+                        "description": "操作员QQ号",
+                        "type": "integer",
+                        "minimum": 0
+                    }
+                }
+            }
+        }
+    }
+}

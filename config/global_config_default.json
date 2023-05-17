@@ -1,0 +1,68 @@
+{
+    "functions": {
+        "default": false,
+        "emoji": false,
+        "game": false,
+        "group": false,
+        "admin": false
+    },
+    "poke": {
+        "cd": 3,
+        "emojiPath": "resource/plugins/tools/emoji",
+        "replies": [
+            "?",
+            "hentai!",
+            "( >﹏<。)",
+            "好气喔，我要给你起个难听的绰号",
+            "那...那里...那里不能戳...",
+            "[pixiv]喏",
+            "不准戳我啦[face 38]",
+            "戳回去[poke]",
+            "竟然敢戳我......哼，不理你啦！[face 102]",
+            "[emoji]"
+        ]
+    },
+    "sauceNAO": {
+        "api_key": "your api key",
+        "proxy": "proxy url"
+    },
+    "lottery": {
+        "coupon": 100,
+        "day": 1,
+        "probability": 0.1,
+        "times": 3
+    },
+    "emoji": {
+        "tips": false
+    },
+    "avatar": {
+        "proxy": "proxy url"
+    },
+    "bottle": {
+        "max": 300,
+        "black": [],
+        "notip": "抱歉, 兔兔没有捡到任何漂流瓶呢>_<",
+        "destroy": false,
+        "self": false,
+        "picture": false,
+        "check": {
+            "enable": false,
+            "appid": 123456,
+            "group": 123456
+        }
+    },
+    "specialTitle": {
+        "admin": false,
+        "cd": 1800,
+        "guest": false
+    },
+    "restart": [
+        123456
+    ],
+    "operators": [
+        {
+            "appid": 123456,
+            "operator": 654321
+        }
+    ]
+}

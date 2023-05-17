@@ -29,21 +29,32 @@
 }
 
 .player {
-    margin: 0px 20px;
+    margin: 0 20px;
     font-size: 20px;
     font-weight: bold;
     font-family: 楷体, 'Times New Roman', Times, serif;
-    background: linear-gradient(to right,#f0610e, #e8771a, #fff34a);
+    background: linear-gradient(to right, #f0610e, #e8771a, #fff34a);
+    -webkit-background-clip: text;
+    color: transparent;
+}
+
+.score {
+    margin: 0 20px;
+    font-size: 30px;
+    font-weight: bold;
+    font-family: 楷体, 'Times New Roman', Times, serif;
+    text-align: center;
+    background: linear-gradient(to right, #a2fa1e, #109313, #007aaf);
     -webkit-background-clip: text;
     color: transparent;
 }
 
 .color {
-    margin: 0px 18px;
+    margin: 0 18px;
     font-size: 20px;
     font-weight: bold;
     font-family: 楷体, 'Times New Roman', Times, serif;
-    background: linear-gradient(to right,#6190e8, #92b1e7, #a7bfe8);
+    background: linear-gradient(to right, #6190e8, #92b1e7, #a7bfe8);
     -webkit-background-clip: text;
     color: transparent;
 }

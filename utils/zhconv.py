@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 This module implements a simple conversion and localization between simplified and traditional Chinese using tables from MediaWiki.
-It doesn't contains a segmentation function and uses maximal forward matching, so it's simple.
+It doesn't contain a segmentation function and uses maximal forward matching, so it's simple.
 For a complete and accurate solution, see OpenCC.
 For Chinese segmentation, see Jieba.
 
@@ -24,13 +24,14 @@ Support MediaWiki's convertion format:
 # Only Python3 can pass the doctest here due to unicode problems.
 __version__ = '1.4.3'
 
-import os
-import sys
-import re
 import json
+import os
+import re
+import sys
 
 try:
     from pkg_resources import resource_stream
+
     get_module_res = lambda *res: resource_stream(__name__, os.path.join(*res))
 except ImportError:
     get_module_res = lambda *res: open(os.path.normpath(
@@ -46,7 +47,7 @@ Locales = {
     'zh-mo': ('zh-mo', 'zh-hk', 'zh-hant', 'zh-tw', 'zh'),
     'zh-hant': ('zh-hant', 'zh-tw', 'zh-hk', 'zh'),
     'zh-hans': ('zh-hans', 'zh-cn', 'zh-sg', 'zh'),
-    'zh': ('zh',) # special value for no conversion
+    'zh': ('zh',)  # special value for no conversion
 }
 
 _DEFAULT_DICT = "zhcdict.json"
@@ -65,6 +66,7 @@ RE_splitmap = re.compile(r'\s*;\s*')
 RE_splituni = re.compile(r'\s*=>\s*')
 RE_splitpair = re.compile(r'\s*:\s*')
 
+
 def loaddict(filename=DICTIONARY):
     """
     Load the dictionary from a specific JSON file.
@@ -79,6 +81,7 @@ def loaddict(filename=DICTIONARY):
             zhcdicts = json.loads(f.read().decode('utf-8'))
     zhcdicts['SIMPONLY'] = frozenset(zhcdicts['SIMPONLY'])
     zhcdicts['TRADONLY'] = frozenset(zhcdicts['TRADONLY'])
+
 
 def getdict(locale):
     """
@@ -126,12 +129,14 @@ def getdict(locale):
         pfsdict[locale] = getpfset(got)
     return got
 
+
 def getpfset(convdict):
     pfset = []
     for word in convdict:
         for ch in range(len(word)):
-            pfset.append(word[:ch+1])
+            pfset.append(word[:ch + 1])
     return frozenset(pfset)
+
 
 def issimp(s, full=False):
     """
@@ -167,11 +172,13 @@ def issimp(s, full=False):
                 return False
         return None
 
+
 def fallback(locale, mapping):
     for l in Locales[locale]:
         if l in mapping:
             return mapping[l]
     return convert(tuple(mapping.values())[0], locale)
+
 
 def convtable2dict(convtable, locale, update=None):
     """
@@ -195,6 +202,7 @@ def convtable2dict(convtable, locale, update=None):
                 rdict[word] = v
     return rdict
 
+
 def tokenize(s, locale, update=None):
     """
     Tokenize `s` according to corresponding locale dictionary.
@@ -208,7 +216,7 @@ def tokenize(s, locale, update=None):
         newset = set()
         for word in update:
             for ch in range(len(word)):
-                newset.add(word[:ch+1])
+                newset.add(word[:ch + 1])
         pfset = pfset | newset
     ch = []
     N = len(s)
@@ -223,7 +231,7 @@ def tokenize(s, locale, update=None):
                 maxword = frag
                 maxpos = i
             i += 1
-            frag = s[pos:i+1]
+            frag = s[pos:i + 1]
         if maxword is None:
             maxword = s[pos]
             pos += 1
@@ -231,6 +239,7 @@ def tokenize(s, locale, update=None):
             pos = maxpos + 1
         ch.append(maxword)
     return ch
+
 
 def convert(s, locale, update=None):
     """
@@ -257,13 +266,13 @@ def convert(s, locale, update=None):
     newset = set()
     if update:
         # TODO: some sort of caching
-        #zhdict = zhdict.copy()
-        #zhdict.update(update)
+        # zhdict = zhdict.copy()
+        # zhdict.update(update)
         newset = set()
         for word in update:
             for ch in range(len(word)):
-                newset.add(word[:ch+1])
-        #pfset = pfset | newset
+                newset.add(word[:ch + 1])
+        # pfset = pfset | newset
     ch = []
     N = len(s)
     pos = 0
@@ -280,7 +289,7 @@ def convert(s, locale, update=None):
                 maxword = zhdict[frag]
                 maxpos = i
             i += 1
-            frag = s[pos:i+1]
+            frag = s[pos:i + 1]
         if maxword is None:
             maxword = s[pos]
             pos += 1
@@ -288,6 +297,7 @@ def convert(s, locale, update=None):
             pos = maxpos + 1
         ch.append(maxword)
     return ''.join(ch)
+
 
 def convert_for_mw(s, locale, update=None):
     """
@@ -390,13 +400,13 @@ def convert_for_mw(s, locale, update=None):
                             except ValueError:
                                 pass
                     # D: convert description (useless)
-                    #elif f == 'D':
-                        #ch.append('; '.join(': '.join(x) for x in newrules[0].items()))
+                    # elif f == 'D':
+                    # ch.append('; '.join(': '.join(x) for x in newrules[0].items()))
                     # T: title convert (useless)
                     # R: raw content (implied above)
                     # N: current variant name (useless)
-                    #elif f == 'N':
-                        #ch.append(locale)
+                    # elif f == 'N':
+                    # ch.append(locale)
                 ruledict = convtable2dict(rules, locale, update)
             else:
                 fblimit = frozenset(flag) & frozenset(Locales[locale])
@@ -421,30 +431,32 @@ def convert_for_mw(s, locale, update=None):
             ch.append(convert(frag, locale, ruledict))
     if nested:
         # unbalanced
-        ch.append(convert_for_mw(block + '}-'*nested, locale, ruledict))
+        ch.append(convert_for_mw(block + '}-' * nested, locale, ruledict))
     return ''.join(ch)
+
 
 def test_convert_mw(locale, update=None):
     s = ('英國-{zh:利兹;zh-hans:利兹;zh-hk:列斯;zh-tw:里茲}-大学\n'
-        '-{zh-hans:计算机; zh-hant:電腦;}-\n'
-        '-{H|巨集=>zh-cn:宏;}-\n'
-        '测试：巨集、宏\n'
-        '-{简体字繁體字}-\n'
-        '北-{}-韓、北朝-{}-鲜\n'
-        '-{H|zh-cn:博客; zh-hk:網誌; zh-tw:部落格;}-\n'
-        '测试：博客、網誌、部落格\n'
-        '-{A|zh-cn:博客; zh-hk:網誌; zh-tw:部落格;}-\n'
-        '测试：博客、網誌、部落格\n'
-        '-{H|zh-cn:博客; zh-hk:網誌; zh-tw:部落格;}-\n'
-        '测试1：博客、網誌、部落格\n'
-        '-{-|zh-cn:博客; zh-hk:網誌; zh-tw:部落格;}-\n'
-        '测试2：博客、網誌、部落格\n'
-        '-{T|zh-cn:汤姆·汉克斯; zh-hk:湯·漢斯; zh-tw:湯姆·漢克斯;}-\n'
-        '-{D|zh-cn:汤姆·汉克斯; zh-hk:湯·漢斯; zh-tw:湯姆·漢克斯;}-\n'
-        '-{H|zh-cn:博客; zh-hk:網誌; zh-tw:部落格;}-\n'
-        '测试1：-{zh;zh-hans;zh-hant|博客、網誌、部落格}-\n'
-        '测试2：-{zh;zh-cn;zh-hk|博客、網誌、部落格}-')
+         '-{zh-hans:计算机; zh-hant:電腦;}-\n'
+         '-{H|巨集=>zh-cn:宏;}-\n'
+         '测试：巨集、宏\n'
+         '-{简体字繁體字}-\n'
+         '北-{}-韓、北朝-{}-鲜\n'
+         '-{H|zh-cn:博客; zh-hk:網誌; zh-tw:部落格;}-\n'
+         '测试：博客、網誌、部落格\n'
+         '-{A|zh-cn:博客; zh-hk:網誌; zh-tw:部落格;}-\n'
+         '测试：博客、網誌、部落格\n'
+         '-{H|zh-cn:博客; zh-hk:網誌; zh-tw:部落格;}-\n'
+         '测试1：博客、網誌、部落格\n'
+         '-{-|zh-cn:博客; zh-hk:網誌; zh-tw:部落格;}-\n'
+         '测试2：博客、網誌、部落格\n'
+         '-{T|zh-cn:汤姆·汉克斯; zh-hk:湯·漢斯; zh-tw:湯姆·漢克斯;}-\n'
+         '-{D|zh-cn:汤姆·汉克斯; zh-hk:湯·漢斯; zh-tw:湯姆·漢克斯;}-\n'
+         '-{H|zh-cn:博客; zh-hk:網誌; zh-tw:部落格;}-\n'
+         '测试1：-{zh;zh-hans;zh-hant|博客、網誌、部落格}-\n'
+         '测试2：-{zh;zh-cn;zh-hk|博客、網誌、部落格}-')
     return convert_for_mw(s, locale, update)
+
 
 def main():
     """
@@ -473,6 +485,7 @@ def main():
         else:
             print(res)
         ln = sys.stdin.readline()
+
 
 if __name__ == '__main__':
     main()

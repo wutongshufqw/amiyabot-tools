@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+          name="viewport">
+    <meta content="ie=edge" http-equiv="X-UA-Compatible">
     <title>template</title>
-    <link rel="stylesheet" href="../css/gomoku.css">
+    <link href="../css/gomoku.css" rel="stylesheet">
     <script src="../js/vue.min.js"></script>
 </head>
 <body>
@@ -15,7 +15,7 @@
         <table>
             <tr>
                 <td rowspan="2">
-                    <img class="avatar" :src="data.avatar" alt="">
+                    <img :src="data.avatar" alt="" class="avatar">
                 </td>
                 <td>
                     <div class="player">当前玩家：{{data.player}}</div>
@@ -28,18 +28,33 @@
                             <tr>
                                 <td>棋子颜色：</td>
                                 <td>
-                                    <img v-if="data.chessColor === 'black'" src="../resource/image/gomoku/black.png" alt="player1">
-                                    <img v-if="data.chessColor === 'white'" src="../resource/image/gomoku/white.png" alt="player2">
+                                    <img alt="player1" src="../resource/image/gomoku/black.png"
+                                         v-if="data.chessColor === 'black'">
+                                    <img alt="player2" src="../resource/image/gomoku/white.png"
+                                         v-if="data.chessColor === 'white'">
                                 </td>
                             </tr>
                         </table>
                     </div>
                 </td>
             </tr>
+            <tr v-if="data.score">
+                <td colspan="2">
+                    <div style="background-color: rgba(125, 125, 125, 0.4);width: 200px;height: auto; margin: auto">
+                        <div class="score">
+                            当前比分
+                            <br/>
+                            <img alt="player1" src="../resource/image/gomoku/black.png">
+                            {{data.score[0]}}:{{data.score[1]}}
+                            <img alt="player2" src="../resource/image/gomoku/white.png">
+                        </div>
+                    </div>
+                </td>
+            </tr>
         </table>
     </div>
     <div class="gomoku">
-        <canvas id="gomoku" width="620" height="620"></canvas>
+        <canvas height="620" id="gomoku" width="620"></canvas>
     </div>
 </div>
 </body>
@@ -53,7 +68,7 @@
                 _this.flag = 0;
                 let container = document.getElementById("gomoku");
                 _this.ctx = container.getContext("2d");
-                _this.ctx.translate(70,70);
+                _this.ctx.translate(70, 70);
                 let img1 = new Image();
                 img1.src = "../resource/image/gomoku/black.png";
                 img1.onload = function () {
@@ -74,14 +89,14 @@
                 _this.ctx.beginPath();
                 _this.fillRoundRect(_this.ctx, 0, 0, 480, 480, 10, "#fff6");
                 for (let i = 0; i < 15; i++) {
-                  _this.ctx.beginPath();
-                  _this.ctx.strokeStyle = "#000";
-                  _this.ctx.moveTo(30 + i * 30, 30); //垂直方向画15根线，相距30px;
-                  _this.ctx.lineTo(30 + i * 30, 450);
-                  _this.ctx.stroke();
-                  _this.ctx.moveTo(30, 30 + i * 30); //水平方向画15根线，相距30px;棋盘为14*14；
-                  _this.ctx.lineTo(450, 30 + i * 30);
-                  _this.ctx.stroke();
+                    _this.ctx.beginPath();
+                    _this.ctx.strokeStyle = "#000";
+                    _this.ctx.moveTo(30 + i * 30, 30); //垂直方向画15根线，相距30px;
+                    _this.ctx.lineTo(30 + i * 30, 450);
+                    _this.ctx.stroke();
+                    _this.ctx.moveTo(30, 30 + i * 30); //水平方向画15根线，相距30px;棋盘为14*14；
+                    _this.ctx.lineTo(450, 30 + i * 30);
+                    _this.ctx.stroke();
                 }
                 for (let i = 0; i < 15; i++) {
                     _this.ctx.font = "20px Times New Roman";
@@ -96,7 +111,9 @@
             fillRoundRect(cxt, x, y, width, height, radius, fillColor) {
                 let _this = this
                 //圆的直径必然要小于矩形的宽高
-                if (2 * radius > width || 2 * radius > height) { return false; }
+                if (2 * radius > width || 2 * radius > height) {
+                    return false;
+                }
 
                 cxt.save();
                 cxt.translate(x, y);
@@ -136,11 +153,11 @@
             drawChesses() {
                 let _this = this
                 _this.flag++
-                if(_this.flag < 2)
+                if (_this.flag < 2)
                     return
-                for(let i = 0; i < _this.data.chessMap.length; i++) {
-                    for(let j = 0; j < _this.data.chessMap[i].length; j++) {
-                        if(_this.data.chessMap[i][j] !== '') {
+                for (let i = 0; i < _this.data.chessMap.length; i++) {
+                    for (let j = 0; j < _this.data.chessMap[i].length; j++) {
+                        if (_this.data.chessMap[i][j] !== '') {
                             _this.drawChess(i, j, _this.data.chessMap[i][j])
                         }
                     }

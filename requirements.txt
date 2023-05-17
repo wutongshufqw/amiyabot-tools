@@ -1,0 +1,17 @@
+imageio
+numpy
+opencv_python
+typing_extensions
+httpx
+aiofiles
+aiocache
+emoji
+fontTools
+Pillow
+pydantic
+matplotlib
+bbcode
+anyio
+msgpack
+ujson
+pygtrie
