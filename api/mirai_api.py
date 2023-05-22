@@ -69,6 +69,12 @@ class MiraiHttpHelper:
     async def user_profile(self, target: int):
         return await self.get('/userProfile', {'sessionKey': self.session, 'target': target})
 
+    async def mute(self, target: int, member_id: int, time: int):
+        return await self.post(
+            '/mute',
+            {'sessionKey': self.session, 'target': target, 'memberId': member_id, 'time': time}
+        )
+
 
 class MiraiTools:
     def __init__(self, instance: MiraiBotInstance, event: Event = None, data: Message = None):
@@ -196,3 +202,8 @@ class MiraiTools:
             return result['data']
         else:
             return False
+
+    async def ban(self, channel_id: int, user_id: int, ban_time: int) -> bool:
+        res = await self.helper.mute(channel_id, user_id, ban_time)
+        result = json.loads(res)
+        return result['code'] == 0

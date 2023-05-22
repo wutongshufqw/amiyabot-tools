@@ -281,7 +281,7 @@ async def search_image(data: Message):
             if json_['service_name'] == 'pixiv':
                 image = await download_async(
                     'https://pixiv.re/' + str(json_['illust_id']) + json_['page_string'].replace('_p', '-') + '.jpg')
-            res = await data.send(Chain(data).text(tip).image(image).text('20s后撤回'))
+            res = await data.send(Chain(data).text(tip).image(image).text('\n20s后撤回'))
             if res:
                 recall_list.append({'res': res, 'time': time.time() + 20})
             return

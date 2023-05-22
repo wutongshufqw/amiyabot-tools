@@ -1,0 +1,68 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "required": [],
+    "properties": {
+        "ban": {
+            "title": "禁言",
+            "description": "禁言配置",
+            "type": "object",
+            "required": ["range", "time", "black_list", "tip"],
+            "properties": {
+                "range": {
+                    "title": "周期",
+                    "description": "禁言重置周期(0为立即重置), 单位: 分钟",
+                    "type": "integer"
+                },
+                "time": {
+                    "title": "阈值",
+                    "description": "黑名单触犯后在一个周期内触发则会累计次数(0为无限制), 在周期内触发会重置时间，周期结束后触发则从0开始",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": ["count", "time"],
+                        "properties": {
+                            "count": {
+                                "title": "次数",
+                                "description": "触发次数",
+                                "type": "integer"
+                            },
+                            "time": {
+                                "title": "禁言时长",
+                                "description": "禁言时长, 一个周期内达到该次数后禁言的时长(单位: 分钟)",
+                                "type": "integer"
+                            }
+                        }
+                    }
+                },
+                "black_list": {
+                    "title": "黑名单",
+                    "description": "关键词触发规则(所有关键词会一起计入周期)",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": ["keyword", "type"],
+                        "properties": {
+                            "keyword": {
+                                "title": "关键词",
+                                "description": "关键词",
+                                "type": "string"
+                            },
+                            "type": {
+                                "title": "类型",
+                                "description": "触发类型",
+                                "type": "string",
+                                "enum": ["包含关键词", "等于关键词", "正则匹配"]
+                            }
+                        }
+                    }
+                },
+                "tip": {
+                    "title": "提示",
+                    "description": "禁言提示",
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

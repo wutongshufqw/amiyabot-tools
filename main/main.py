@@ -1,6 +1,7 @@
 import os
 import shutil
 import time
+from typing import Optional
 
 from amiyabot import Message
 from amiyabot.builtin.messageChain import Chain
@@ -24,42 +25,6 @@ except ValueError as e:
         cursor.execute('DROP TABLE IF EXISTS new_friends')
         from ..utils import get_saucenao, SQLHelper, convert
 
-# 尝试导入表情包组件
-emoji_installed = False
-try:
-    try:
-        import imageio
-        import numpy
-        import cv2
-        import typing_extensions
-        import httpx
-        import aiofiles
-        import aiocache
-        import emoji
-        import fontTools
-        import PIL
-        import pydantic
-        import matplotlib
-        import bbcode
-        import anyio
-        import msgpack
-        import ujson
-        import pygtrie
-    except ImportError as e:
-        print("Some requirements are missing, trying to fix...")
-        print("Installing requirements...")
-        os.system(f"cd {os.path.dirname(__file__)}/../ && pip install -r requirements.txt")
-        print("Requirements installed.")
-    from ..emoji import install_emoji
-
-    emoji_installed = True
-except ImportError:
-    log.error(
-        '表情包组件导入失败, 请检查是否为代码部署, 若为代码部署可以尝试安装`resource/plugins/tools/requirements.txt`中的依赖后重启')
-
-if emoji_installed:
-    from ..emoji import install_emoji
-
 curr_dir = os.path.dirname(__file__)
 recall_list = []
 
@@ -67,18 +32,18 @@ recall_list = []
 class ToolsPluginInstance(AmiyaBotPluginInstance):
     def install(self):
         install_main(self)
-        if emoji_installed:
-            install_emoji()
 
 
 bot = ToolsPluginInstance(
     name='小工具合集',
-    version='1.9.2',
+    version='1.9.4',
     plugin_id='amiyabot-tools',
     plugin_type='tools',
     description='AmiyaBot小工具合集 By 天基',
     document=f'{curr_dir}/../README.md',
     instruction=f'{curr_dir}/../help.md',
+    channel_config_default=f'{curr_dir}/../config/channel_config_default.json',
+    channel_config_schema=f'{curr_dir}/../config/channel_config_schema.json',
     global_config_default=f'{curr_dir}/../config/global_config_default.json',
     global_config_schema=f'{curr_dir}/../config/global_config_schema.json',
 )
@@ -151,7 +116,7 @@ async def update_tools(data: Message):
     return
 
 
-async def tool_is_close(appid: str, main_id: int, sub_id: int, sub_sub_id: int, channel_id: str = None) -> bool:
+async def tool_is_close(appid: str, main_id: int, sub_id: int, sub_sub_id: int, channel_id: Optional[str] = None) -> bool:
     tool = await SQLHelper.get_tool(appid, main_id, sub_id, sub_sub_id)
     flag = False
     if tool is not None and tool.open:

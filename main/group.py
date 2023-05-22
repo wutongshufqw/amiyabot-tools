@@ -1,9 +1,18 @@
+import asyncio
+import functools
+import re
+import time
+
 from amiyabot import Message, Chain, MiraiBotInstance, CQHttpBotInstance, Event
 
 from core import Admin
+from core.database.user import User
 from .main import bot, tool_is_close, get_cooldown, set_cooldown
 from ..api import MiraiTools, GOCQTools
 from ..utils import SQLHelper
+
+special_title_cd = {}
+ban_list = {}
 
 
 # 修改群名片&群头衔
@@ -42,7 +51,7 @@ async def set_group_card(data: Message):
 
 
 @bot.on_message(keywords=['修改群头衔'], allow_direct=False, level=5)
-async def set_group_special_title(data: Message, special_title_cd=None):
+async def set_group_special_title(data: Message):
     if await tool_is_close(data.instance.appid, 1, 3, 2, data.channel_id):
         return
     config_ = bot.get_config('specialTitle')
@@ -169,4 +178,82 @@ async def quit_group(data: Message):
         if type(data.instance) is CQHttpBotInstance:
             gocq = GOCQTools(data.instance, data=data)
             await gocq.quit_group(int(data.channel_id))
+    return
+
+
+# 群禁言
+async def ban_verify(data: Message):
+    if await tool_is_close(data.instance.appid, 1, 3, 6, data.channel_id):
+        return False
+    user = User.get_or_none(user_id=data.user_id)
+    if not user or user.black:
+        return False
+    config_ = bot.get_config("ban", data.channel_id)
+    if config_ is None:
+        return False
+    else:
+        black_list = config_.get('black_list', [])
+        flag = False
+        for item in black_list:
+            keyword = item.get('keyword', None)
+            k_type = item.get('type', None)
+            if keyword and k_type:
+                if k_type == '包含关键词':
+                    if keyword in data.text_original:
+                        flag = True
+                        break
+                elif k_type == '等于关键词':
+                    if keyword == data.text_original:
+                        flag = True
+                        break
+                elif k_type == '正则表达式':
+                    if re.search(keyword, data.text_original):
+                        flag = True
+                        break
+        if flag:
+            curr_time = int(time.time())
+            info = ban_list.get(f'{data.channel_id}-{data.user_id}', {})
+            if not info:
+                info = {
+                    'count': 1,
+                    'time': curr_time
+                }
+            else:
+                range_ = config_.get('range', 0)
+                if curr_time - info['time'] <= range_ * 60:
+                    info['count'] += info['count']
+                else:
+                    info['count'] = 1
+                info['time'] = curr_time
+            ban_list[f'{data.channel_id}-{data.user_id}'] = info
+            ban_times = config_.get('time', [{"count": 1, "time": 1}])
+
+            def cmp(t1, t2):
+                return t1['count'] - t2['count']
+
+            ban_times.sort(key=functools.cmp_to_key(cmp))
+            ban_time = 0
+            for item in ban_times:
+                if info['count'] >= item['count']:
+                    ban_time = item['time']
+                else:
+                    break
+            if ban_time > 0:
+                res = False
+                await asyncio.sleep(1)
+                if type(data.instance) is MiraiBotInstance:
+                    mirai = MiraiTools(data.instance, data=data)
+                    res = await mirai.ban(data.channel_id, data.user_id, ban_time * 60)
+                if type(data.instance) is CQHttpBotInstance:
+                    gocq = GOCQTools(data.instance, data=data)
+                    res = await gocq.ban(data.channel_id, data.user_id, ban_time * 60)
+                if res:
+                    tip = config_.get('tip', '博士, 你触犯了违禁词, 请注意言行~')
+                    await data.send(Chain(data).text(tip))
+                    return True
+    return False
+
+
+@bot.on_message(verify=ban_verify, check_prefix=False)
+async def ban(data: Message):
     return

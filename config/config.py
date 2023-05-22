@@ -29,12 +29,14 @@ tools = [
     {'main_id': 1, 'sub_id': 2, 'sub_sub_id': 1, 'name': '扫雷'},
     {'main_id': 1, 'sub_id': 2, 'sub_sub_id': 2, 'name': '五子棋'},
     {'main_id': 1, 'sub_id': 2, 'sub_sub_id': 3, 'name': '漂流瓶'},
+    {'main_id': 1, 'sub_id': 2, 'sub_sub_id': 4, 'name': '塔罗牌'},
 
     {'main_id': 1, 'sub_id': 3, 'sub_sub_id': 1, 'name': '修改群名片'},
     {'main_id': 1, 'sub_id': 3, 'sub_sub_id': 2, 'name': '修改群头衔'},
     {'main_id': 1, 'sub_id': 3, 'sub_sub_id': 3, 'name': '兔兔撤回'},
     {'main_id': 1, 'sub_id': 3, 'sub_sub_id': 4, 'name': '入群欢迎'},
     {'main_id': 1, 'sub_id': 3, 'sub_sub_id': 5, 'name': '机器人退群'},
+    {'main_id': 1, 'sub_id': 3, 'sub_sub_id': 6, 'name': '群禁言'},
 
     {'main_id': 2, 'sub_id': 1, 'sub_sub_id': 1, 'name': '兔兔重启'},
     {'main_id': 2, 'sub_id': 1, 'sub_sub_id': 2, 'name': '好友申请'},

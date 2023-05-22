@@ -5,13 +5,19 @@ import re
 import time
 import traceback
 
-from amiyabot import Message, Chain
+from amiyabot import Message, Chain, Equal
+from amiyabot.util import run_in_thread_pool
 from amiyabot.network.download import download_async
 from core import bot as main_bot, Admin
 
 from .main import bot, curr_dir, tool_is_close, create_file, remove_file
-from ..utils import Bottle, SQLHelper
+from ..utils import Bottle, SQLHelper, Tarot
 from ..config import bottle_dir
+
+LASTREPLAY = [
+    "博士抽出了第三张塔罗牌了，看来这次占卜已经结束了呢，不过不管好运还是坏运，阿米娅都会陪着博士的！",
+    "过去，现在，未来的阵列已显现于此，希望博士能够做出正确的选择！",
+]
 
 
 # 扫雷
@@ -362,11 +368,12 @@ async def gomoku(data: Message):
 
 
 # 漂流瓶
-@bot.on_message(keywords=re.compile(r'^.*?(扔|捡|删除|(不)?通过|审核)(所有)?漂流瓶\s?(匿名|不匿|\d+)?\s?(.*)$'), allow_direct=True, level=5)
+@bot.on_message(keywords=re.compile(r'^.*?(扔|捡|删除|(不)?通过|审核)(所有|全部)?漂流瓶\s?(匿名|不匿|\d+)?\s?([\s\S]*)$'),
+                allow_direct=True, level=5)
 async def bottle(data: Message):
     if await tool_is_close(data.instance.appid, 1, 2, 3, data.channel_id):
         return
-    match = re.match(r'^.*?(扔|捡|删除|(不)?通过|审核)(所有|全部)?漂流瓶\s?(匿名|不匿|\d+)?\s?(.*)$', data.text_original)
+    match = re.match(r'^.*?(扔|捡|删除|(不)?通过|审核)(所有|全部)?漂流瓶\s?(匿名|不匿|\d+)?\s?([\s\S]*)$', data.text_original)
     config_ = bot.get_config('bottle')
     if not match:
         return
@@ -400,6 +407,9 @@ async def bottle(data: Message):
                         message = Chain().text(f'有新的漂流瓶需要审核\nid: {res.id}')
                         message.text(f'\n用户: {res.user_name}({res.user_id})')
                         message.text(f'\n状态: {"匿名" if res.anonymous else "不匿名"}')
+                        message.text(f'\n兔兔实例：{data.instance.appid}')
+                        if data.channel_id:
+                            message.text(f'\n群聊: {data.channel_id}')
                         if text != '':
                             message.text(f'\n内容: ').text_image(text)
                         if pictures != '':
@@ -415,7 +425,8 @@ async def bottle(data: Message):
             else:
                 await data.send(Chain(data).text('兔兔扔漂流瓶失败了~'))
         elif keyword == '捡':
-            bottle_ = await SQLHelper.get_random_bottle()
+            self = config_.get('self', False)
+            bottle_ = await SQLHelper.get_random_bottle(self, int(data.user_id) if not self else None)
             if bottle_:
                 message = Chain(data).text(f'兔兔捡到了一个漂流瓶\nid: {bottle_.id}')
                 if not bottle_.anonymous:
@@ -485,10 +496,59 @@ async def bottle(data: Message):
                     message = Chain(data).text('待审核的漂流瓶:')
                     for bottle_ in bottles:
                         message.text(f'\nid: {bottle_.id}')
-                        message.text(f'\n内容: ').text_image(bottle_.text)
+                        message.text(f'\n内容: ')
+                        if bottle_.text:
+                            message.text_image(bottle_.text)
                         if bottle_.picture:
                             pictures = bottle_.picture.split(';')
                             for pic in pictures:
                                 message.image(f'{bottle_dir}{pic}')
                     message.text(f'\n回复"兔兔通过漂流瓶 [id]"通过审核\n回复"兔兔不通过漂流瓶 [id]"不通过审核')
                     return message
+                else:
+                    return Chain(data).text('没有待审核的漂流瓶哦~')
+
+
+@bot.on_message(keywords=[Equal('塔罗牌'), Equal('塔罗牌占卜')], allow_direct=True, level=5)
+async def tarot(data: Message):
+    if await tool_is_close(data.instance.appid, 1, 2, 4, data.channel_id):
+        return
+    tarot_ = Tarot(data.user_id)
+    await data.send(Chain(data).text(f'{data.nickname}就这样你走入了占卜店中，少女面带着微笑说着：“博士既然来了，不如抽三张塔罗牌看看今'
+                                     f'天的运势哦~”(输入三次“选择[数字]”抽取三张塔罗牌，如“选择1”)'))
+    draw_bytes = Tarot.get_bytes(await run_in_thread_pool(Tarot.draw_tarot, tarot_.list_tarot))
+    await data.send(Chain(data).image(draw_bytes))
+
+    async def data_filter(data_: Message):
+        return re.match(r'^(选择)?([1-9]|1[0-9]|2[0-2])$', data_.text_original)
+
+    i = 0
+    while i < 3:
+        res = await data.wait(data_filter=data_filter)
+        if res:
+            match = re.match(r'^(选择)?([1-9]|1[0-9]|2[0-2])$', res.text_original)
+            card = tarot_.choose(int(match.group(2)))
+            if not card:
+                await data.send(Chain(data).text('唔。。博士!这张卡已经抽过了！'))
+                continue
+            img = Tarot.get_bytes(await run_in_thread_pool(Tarot.draw_tarot, tarot_.list_tarot))
+            await data.send(
+                Chain(data)
+                .text(f'唔。。博士这次抽到的是 『{card[0]}』呢，这代表着\n————————\n{card[1]}')
+                .image(img)
+            )
+            if i < 2:
+                if card[0] in ['恶魔正位', '月亮正位', '塔正位', '塔逆位'] or ("逆位" in card[0] and "恶魔逆位" not in card[0]):
+                    await data.send(
+                        Chain(data)
+                        .text('唔。。看起来博士似乎不太好运的样子呢，不过不要担心，这并不是结局哦，所以博士，再来一次吧！')
+                    )
+                else:
+                    await data.send(Chain(data).text('嗯！。。看起来似乎不错的样子呢，博士，再来一张吧！'))
+            else:
+                await data.send(Chain(data).text(random.choice(LASTREPLAY)))
+            i += 1
+        else:
+            return Chain(data).text('“博士，真是笨蛋！。。”少女看着你一动不动，于是有点嗔怒的收起了塔罗牌。')
+    img = Tarot.get_bytes(await run_in_thread_pool(Tarot.last_draw, tarot_.list_tarot))
+    return Chain(data).image(img)

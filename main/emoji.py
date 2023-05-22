@@ -1,14 +1,64 @@
-import shlex
-import traceback
-from io import BytesIO
-from typing import Union, List
+import os
+import shutil
+from core import log, GitAutomation
 
-from amiyabot import Equal, Message, Chain, MiraiBotInstance, CQHttpBotInstance
+resources_dir = 'resource/plugins/tools'
+import_success = True
 
-from ..api import GOCQTools
-from ..api import MiraiTools
-from ..emoji import *
-from .main import bot, tool_is_close
+# 尝试导入表情包组件
+try:
+    try:
+        import imageio
+        import numpy
+        import cv2
+        import typing_extensions
+        import httpx
+        import aiofiles
+        import aiocache
+        import emoji
+        import fontTools
+        import PIL
+        import pydantic
+        import matplotlib
+        import bbcode
+        import anyio
+        import msgpack
+        import ujson
+        import pygtrie
+    except ImportError as e:
+        log.warning("Some requirements are missing, trying to fix...")
+        log.info("Installing requirements...")
+        os.system(f"cd {os.path.dirname(__file__)}/../ && pip install -r requirements.txt")
+        log.info("Requirements installed.")
+    finally:
+        log.info('检查资源文件更新...')
+        git_url = 'https://gitlab.com/wutongshufqw/emoji-resources.git'
+        GitAutomation(os.path.join(resources_dir, 'emoji_resources'), git_url).update()
+        log.info('更新完成')
+        # copy resources from bot resource
+        shutil.rmtree(os.path.join(os.path.dirname(__file__), '../emoji/resources'), ignore_errors=True)
+        shutil.copytree(os.path.join(resources_dir, 'emoji_resources'),
+                        os.path.join(os.path.dirname(__file__), '../emoji/resources'),
+                        ignore=shutil.ignore_patterns('*.git*', '*.git', 'README.md'))
+except ImportError as e:
+    import_success = False
+    shutil.copy(os.path.join(os.path.dirname(__file__), '..', 'requirements.txt'), resources_dir)
+    log.error(
+        '表情包组件导入失败, 请检查是否为代码部署, 若为代码部署可以尝试安装`resource/plugins/tools/requirements.txt`中的依赖后重启')
+    raise e
+
+if import_success:
+    import shlex
+    import traceback
+    from io import BytesIO
+    from typing import Union, List
+
+    from amiyabot import Equal, Message, Chain, MiraiBotInstance, CQHttpBotInstance
+
+    from ..api import GOCQTools
+    from ..api import MiraiTools
+    from ..emoji import *
+    from .main import bot, tool_is_close
 
 
 @bot.on_message(keywords=Equal('兔兔头像表情包帮助'), level=5)
@@ -141,7 +191,8 @@ async def handle_user_args(instance, data: Message):
 
 
 async def verify(data: Message):
-    if await tool_is_close(data.instance.appid, 1, 1, 8, data.channel_id) or type(data.instance) is not CQHttpBotInstance:
+    if await tool_is_close(data.instance.appid, 1, 1, 8, data.channel_id) or type(
+        data.instance) is not CQHttpBotInstance:
         return False, 0
 
     command = petpet_handler.find_handle(data)

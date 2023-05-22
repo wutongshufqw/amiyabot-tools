@@ -68,6 +68,9 @@ class GOCQHttpHelper:
     async def get_msg(self, message_id: int):
         return await self.post('/get_msg', {'message_id': message_id})
 
+    async def set_group_ban(self, group_id: int, user_id: int, duration: int):
+        return await self.post('/set_group_ban', {'group_id': group_id, 'user_id': user_id, 'duration': duration})
+
 
 class GOCQTools:
     def __init__(self, instance: CQHttpBotInstance, event: Event = None, data: Message = None):
@@ -189,3 +192,8 @@ class GOCQTools:
             return result['data']
         else:
             return False
+
+    async def ban(self, channel_id: int, user_id: int, ban_time: int) -> bool:
+        res = await self.helper.set_group_ban(channel_id, user_id, ban_time)
+        result = json.loads(res)
+        return result['status'] == 'ok'

@@ -415,8 +415,12 @@ class SQLHelper:
         return res
 
     @staticmethod
-    async def get_random_bottle():
-        return BottleFlow.select().where(BottleFlow.check == False).order_by(fn.Random()).first()
+    async def get_random_bottle(self: bool = False, user_id: int = None):
+        if self:
+            return BottleFlow.select().where(BottleFlow.check == False).order_by(fn.Random()).first()
+        elif user_id:
+            return BottleFlow.select().where(BottleFlow.check == False, BottleFlow.user_id != user_id)\
+                .order_by(fn.Random()).first()
 
     @staticmethod
     async def delete_all_bottle():
