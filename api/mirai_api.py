@@ -179,8 +179,8 @@ class MiraiTools:
         else:
             return False
 
-    async def get_group_member_info(self, target: int, member_id: int) -> Union[bool, dict]:
-        res = await self.helper.member_profile(target, member_id)
+    async def get_group_member_info(self, group_id: int, user_id: int) -> Union[bool, dict]:
+        res = await self.helper.member_profile(group_id, user_id)
         result = json.loads(res)
         if result['code'] == 0:
             return result['data']
@@ -195,8 +195,8 @@ class MiraiTools:
         else:
             return False
 
-    async def get_stranger_info(self, target: int) -> Union[bool, dict]:
-        res = await self.helper.user_profile(target)
+    async def get_stranger_info(self, user_id: int) -> Union[bool, dict]:
+        res = await self.helper.user_profile(user_id)
         result = json.loads(res)
         if result['code'] == 0:
             return result['data']

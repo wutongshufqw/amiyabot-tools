@@ -369,7 +369,7 @@ async def gomoku(data: Message):
 
 # 漂流瓶
 @bot.on_message(keywords=re.compile(r'^.*?(扔|捡|删除|(不)?通过|审核)(所有|全部)?漂流瓶\s?(匿名|不匿|\d+)?\s?([\s\S]*)$'),
-                allow_direct=True, level=5)
+                allow_direct=True, level=6)
 async def bottle(data: Message):
     if await tool_is_close(data.instance.appid, 1, 2, 3, data.channel_id):
         return

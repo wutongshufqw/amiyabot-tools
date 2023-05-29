@@ -33,7 +33,12 @@
         "times": 3
     },
     "emoji": {
-        "tips": false
+        "prefix": "",
+        "tips": true,
+        "update": true,
+        "use_avatar": true,
+        "use_default": true,
+        "disabled": []
     },
     "avatar": {
         "proxy": "proxy url"

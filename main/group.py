@@ -41,7 +41,7 @@ async def set_group_card(data: Message):
             res = await mirai.set_group_card(group, int(target), new_card)
         if type(data.instance) is CQHttpBotInstance:
             gocq = GOCQTools(data.instance, data=data)
-            res = await gocq.set_group_card(group, int(target), new_card)
+            res = await gocq.set_group_card(int(group), int(target), new_card)
         if res:
             return Chain(data).text('修改成功')
         else:
@@ -167,6 +167,55 @@ async def member_join(event: Event, instance: CQHttpBotInstance):
     return
 
 
+@bot.on_message(keywords=['设置退群消息'], allow_direct=False, level=5)
+async def set_quit(data: Message):
+    if await tool_is_close(data.instance.appid, 1, 3, 7, data.channel_id):
+        return
+    if data.is_admin or bool(Admin.get_or_none(account=data.user_id)):
+        try:
+            quit_ = data.text_original.split(' ', 1)[1].replace('｛', '{').replace('｝', '}')
+            await SQLHelper.set_quit(data.instance.appid, data.channel_id, quit_)
+            return Chain(data).text('退群消息设置成功')
+        except IndexError:
+            return Chain(data).text('请输入退群消息')
+
+
+@bot.on_message(keywords=['清除退群消息'], allow_direct=False, level=5)
+async def clear_quit(data: Message):
+    if await tool_is_close(data.instance.appid, 1, 3, 7, data.channel_id):
+        return
+    if data.is_admin or bool(Admin.get_or_none(account=data.user_id)):
+        await SQLHelper.delete_quit(data.instance.appid, data.channel_id)
+        return Chain(data).text('退群消息已清除')
+
+
+@bot.on_event('MemberLeaveEventQuit')  # Mirai群成员退群
+async def member_quit(event: Event, instance: MiraiBotInstance):
+    if await tool_is_close(instance.appid, 1, 3, 7, event.data['member']['group']['id']):
+        return
+    message = await SQLHelper.get_quit(instance.appid, event.data['member']['group']['id'])
+    if message is not None:
+        await instance.send_message(
+            Chain().text(message.message.replace('{info}', f'{event.data["member"]["memberName"]}({event.data["member"]["id"]})')),
+            channel_id=str(event.data['member']['group']['id'])
+        )
+    return
+
+
+@bot.on_event('notice.group_decrease')  # GOCQ群成员退群
+async def member_quit(event: Event, instance: CQHttpBotInstance):
+    if await tool_is_close(instance.appid, 1, 3, 7, event.data['group_id']) or event.data['sub_type'] != 'leave':
+        return
+    message = await SQLHelper.get_quit(instance.appid, event.data['group_id'])
+    if message is not None:
+        info = await GOCQTools(instance, event).get_stranger_info(event.data['user_id'])
+        await instance.send_message(
+            Chain().text(message.message.replace('{info}', f'{info["nickname"]}({event.data["user_id"]})')),
+            channel_id=str(event.data['group_id'])
+        )
+    return
+
+
 @bot.on_message(keywords=['退群'], allow_direct=False, level=5)
 async def quit_group(data: Message):
     if await tool_is_close(data.instance.appid, 1, 3, 5, data.channel_id):
@@ -221,7 +270,7 @@ async def ban_verify(data: Message):
             else:
                 range_ = config_.get('range', 0)
                 if curr_time - info['time'] <= range_ * 60:
-                    info['count'] += info['count']
+                    info['count'] += 1
                 else:
                     info['count'] = 1
                 info['time'] = curr_time
@@ -248,9 +297,9 @@ async def ban_verify(data: Message):
                     gocq = GOCQTools(data.instance, data=data)
                     res = await gocq.ban(data.channel_id, data.user_id, ban_time * 60)
                 if res:
-                    tip = config_.get('tip', '博士, 你触犯了违禁词, 请注意言行~')
+                    tip = config_.get('tip', '博士, 你触犯了禁言规则, 请注意~')
                     await data.send(Chain(data).text(tip))
-                    return True
+                    return True, 99
     return False
 
 

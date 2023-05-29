@@ -71,6 +71,14 @@ class Welcome(ToolsBaseModel):
 
 
 @table
+class Quit(ToolsBaseModel):
+    id: int = AutoField()
+    appid: int = IntegerField()
+    channel_id: str = CharField()
+    message: str = CharField()
+
+
+@table
 class Fake(ToolsBaseModel):
     id: int = AutoField()
     appid: int = IntegerField()
@@ -256,7 +264,24 @@ class SQLHelper:
 
     @staticmethod
     async def delete_welcome(appid: str, channel_id: str):
-        Welcome.delete().where((Welcome.appid == appid) & (Welcome.channel_id == channel_id)).execute()
+        return Welcome.delete().where((Welcome.appid == appid) & (Welcome.channel_id == channel_id)).execute()
+
+    @staticmethod
+    async def set_quit(appid: str, channel_id: str, message: str):
+        quit_ = Quit.get_or_none(Quit.appid == appid, Quit.channel_id == channel_id)
+        if quit_:
+            quit_.message = message
+            quit_.save()
+        else:
+            Quit.create(appid=appid, channel_id=channel_id, message=message)
+
+    @staticmethod
+    async def get_quit(appid: str, channel_id: str):
+        return Quit.get_or_none(Quit.appid == appid, Quit.channel_id == channel_id)
+
+    @staticmethod
+    async def delete_quit(appid: str, channel_id: str):
+        return Quit.delete().where((Quit.appid == appid) & (Quit.channel_id == channel_id)).execute()
 
     @staticmethod
     async def set_fake(appid: str, channel_id: str, open_: bool):

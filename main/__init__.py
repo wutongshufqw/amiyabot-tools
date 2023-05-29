@@ -7,6 +7,13 @@ if config_.get('default', False):
 if config_.get('emoji', False):
     try:
         from .emoji import *
+        # noinspection PyUnresolvedReferences
+        from .emoji.config import UserConfig
+        if UserConfig.memes_check_resources_on_startup():
+            # noinspection PyUnresolvedReferences
+            from meme_generator.download import check_resources
+            log.info('正在检查资源文件...')
+            asyncio.create_task(check_resources())
         log.info('表情包模块加载完毕')
     except ImportError:
         log.warning('表情包模块加载失败')

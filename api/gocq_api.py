@@ -50,7 +50,7 @@ class GOCQHttpHelper:
         return await self.post('/delete_msg', {'message_id': message_id})
 
     async def get_group_list(self, no_cache: bool = False):
-        return await self.get('/get_group_list', {no_cache: no_cache})
+        return await self.post('/get_group_list', {'no_cache': no_cache})
 
     async def get_group_member_list(self, group_id: int):
         return await self.get('/get_group_member_list', {'group_id': group_id})
@@ -85,7 +85,7 @@ class GOCQTools:
         await poke_message_send(message, event, self.instance)
         return True
 
-    async def set_group_card(self, group, target, card) -> Union[bool, dict]:
+    async def set_group_card(self, group: int, target: int, card: str) -> Union[bool, dict]:
         res = await self.helper.set_group_card(group, target, card)
         result = json.loads(res)
         if result['status'] == 'ok':
@@ -169,8 +169,8 @@ class GOCQTools:
         else:
             return False
 
-    async def quit_group(self, group_id: int) -> Union[bool, dict]:
-        res = await self.helper.set_group_leave(group_id)
+    async def quit_group(self, group_id: int, is_dismiss: bool = False) -> Union[bool, dict]:
+        res = await self.helper.set_group_leave(group_id, is_dismiss)
         result = json.loads(res)
         if result['status'] == 'ok':
             return True

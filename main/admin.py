@@ -1,3 +1,5 @@
+import asyncio
+import threading
 import os
 import sys
 import time
@@ -5,13 +7,14 @@ import time
 from amiyabot import Message, Chain, MiraiBotInstance, CQHttpBotInstance, Event, Equal
 from amiyabot.factory import BotHandlerFactory
 
-from core import Admin, bot as main_bot, GitAutomation
+from core import Admin, bot as main_bot, GitAutomation, log
 from .main import bot, tool_is_close
 
 from ..api import MiraiTools, GOCQTools
 from ..utils import SQLHelper
 
 special_title_cd = {}
+TIME = 1684986476
 
 
 # 重启
@@ -98,8 +101,6 @@ async def new_friend_request(data: Message):
     elif data.text_original.startswith('阿米娅'):
         data.text_original = data.text_original.replace('阿米娅', '', 1)
     elif data.text_original.startswith('Amiya'):
-        data.text_original = data.text_original.replace('Amiya', '', 1)
-    elif data.text_original.startswith('amiya'):
         data.text_original = data.text_original.replace('amiya', '', 1)
     operators = bot.get_config('operators')
     operator = None

@@ -59,6 +59,7 @@ if import_success:
     from ..api import MiraiTools
     from ..emoji import *
     from .main import bot, tool_is_close
+    install_emoji()
 
 
 @bot.on_message(keywords=Equal('兔兔头像表情包帮助'), level=5)
@@ -191,8 +192,7 @@ async def handle_user_args(instance, data: Message):
 
 
 async def verify(data: Message):
-    if await tool_is_close(data.instance.appid, 1, 1, 8, data.channel_id) or type(
-        data.instance) is not CQHttpBotInstance:
+    if await tool_is_close(data.instance.appid, 1, 1, 8, data.channel_id) or type(data.instance) is not CQHttpBotInstance:
         return False, 0
 
     command = petpet_handler.find_handle(data)

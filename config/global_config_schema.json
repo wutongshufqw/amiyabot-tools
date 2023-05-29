@@ -133,13 +133,45 @@
             "description": "表情包配置",
             "type": "object",
             "required": [
-                "tips"
+                "tips",
+                "update",
+                "use_avatar",
+                "use_default",
+                "disabled"
             ],
             "properties": {
+                "prefix": {
+                    "title": "唤醒前缀",
+                    "description": "唤起表情包前缀, 默认为空",
+                    "type": "string"
+                },
                 "tips": {
-                    "title": "提示",
-                    "description": "错误提示",
+                    "title": "错误提示",
+                    "description": "是否在图片/文字数量不符或参数解析错误时提示（若没有设置命令前缀不建议开启，否则极易误触发）",
                     "type": "boolean"
+                },
+                "update": {
+                    "title": "自动更新",
+                    "description": "是否在启动时检查资源更新",
+                    "type": "boolean"
+                },
+                "use_avatar":{
+                    "title": "使用头像",
+                    "description": "在表情需要至少1张图且没有输入图片时，是否使用发送者的头像（谨慎使用，容易误触发）",
+                    "type": "boolean"
+                },
+                "use_default": {
+                    "title": "默认文字",
+                    "description": "在表情需要至少1段文字且没有输入文字时，是否使用默认文字（谨慎使用，容易误触发）",
+                    "type": "boolean"
+                },
+                "disabled": {
+                    "title": "禁用列表",
+                    "description": "禁用的表情包列表，填写表情的 `key`",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },

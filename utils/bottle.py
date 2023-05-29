@@ -27,7 +27,8 @@ class Bottle:
                 # 计算图片的md5
                 hash_ = hashlib.md5(image_bytes).hexdigest()
                 # 保存图片
-                with open(f'{bottle_dir}/{hash_}', 'wb') as f:
-                    f.write(image_bytes)
+                if not Path(f'{bottle_dir}/{hash_}').exists():
+                    with open(f'{bottle_dir}/{hash_}', 'wb') as f:
+                        f.write(image_bytes)
                 path += f'{hash_};'
             return path[:-1]

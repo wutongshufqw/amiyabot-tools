@@ -37,6 +37,7 @@ tools = [
     {'main_id': 1, 'sub_id': 3, 'sub_sub_id': 4, 'name': '入群欢迎'},
     {'main_id': 1, 'sub_id': 3, 'sub_sub_id': 5, 'name': '机器人退群'},
     {'main_id': 1, 'sub_id': 3, 'sub_sub_id': 6, 'name': '群禁言'},
+    {'main_id': 1, 'sub_id': 3, 'sub_sub_id': 7, 'name': '退群提示'},
 
     {'main_id': 2, 'sub_id': 1, 'sub_sub_id': 1, 'name': '兔兔重启'},
     {'main_id': 2, 'sub_id': 1, 'sub_sub_id': 2, 'name': '好友申请'},
