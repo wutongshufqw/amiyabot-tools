@@ -30,7 +30,7 @@
                             "time": {
                                 "title": "禁言时长",
                                 "description": "禁言时长, 一个周期内达到该次数后禁言的时长(单位: 分钟)",
-                                "type": "integer"
+                                "type": "number"
                             }
                         }
                     }
@@ -51,7 +51,6 @@
                             "type": {
                                 "title": "类型",
                                 "description": "触发类型",
-                                "type": "string",
                                 "enum": ["包含关键词", "等于关键词", "正则匹配"]
                             }
                         }

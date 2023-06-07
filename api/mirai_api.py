@@ -92,7 +92,7 @@ class MiraiTools:
         else:
             return False
 
-    async def set_group_card(self, group, target, card) -> Union[bool, dict]:
+    async def set_group_card(self, group: int, target: int, card: str) -> Union[bool, dict]:
         res = await self.helper.member_info(group, target, name=card)
         result = json.loads(res)
         if result['code'] == 0:
@@ -182,8 +182,8 @@ class MiraiTools:
     async def get_group_member_info(self, group_id: int, user_id: int) -> Union[bool, dict]:
         res = await self.helper.member_profile(group_id, user_id)
         result = json.loads(res)
-        if result['code'] == 0:
-            return result['data']
+        if result.get('nickname'):
+            return result
         else:
             return False
 
@@ -198,8 +198,8 @@ class MiraiTools:
     async def get_stranger_info(self, user_id: int) -> Union[bool, dict]:
         res = await self.helper.user_profile(user_id)
         result = json.loads(res)
-        if result['code'] == 0:
-            return result['data']
+        if result.get('nickname'):
+            return result
         else:
             return False
 

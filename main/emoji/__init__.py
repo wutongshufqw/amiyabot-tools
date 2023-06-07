@@ -21,6 +21,7 @@ try:
         log.info("Installing requirements...")
         os.system(f"cd {os.path.dirname(__file__)}/../../ && pip install -r requirements.txt")
         log.info("Requirements installed.")
+        from meme_generator import Meme
 except ImportError as e:
     import_success = False
     shutil.copy(os.path.join(os.path.dirname(__file__), '..', '..', 'requirements.txt'), resources_dir)
@@ -54,7 +55,7 @@ if import_success:
 
     from .config import UserConfig
     from .data_source import ImageSource, User, UserInfo
-    from .depends import split_msg_v11_cq
+    from .depends import split_msg_v11_cq, split_msg_v11_mirai
     from .exception import PlatformUnsupportedError, NetworkError
     from .manager import meme_manager, ActionResult, MemeMode
     from .utils import meme_info
@@ -62,6 +63,7 @@ if import_success:
     from ..main import bot, tool_is_close
 
     from ...api import GOCQTools
+
     logging.disable(logging.DEBUG)
 
 memes_cache_dir = Path(os.path.join(os.path.dirname(__file__), 'memes_cache_dir'))
@@ -268,7 +270,7 @@ async def process(data: Message, meme: Meme, image_sources: List[ImageSource], t
         return Chain(data).text('出错了，请稍后再试'), False
     except ValueError as ex:
         log.warning(traceback.format_exc())
-        return Chain(data).text(f'{e.args[0]}'), False
+        return Chain(data).text(f'{ex.args[0]}'), False
 
 
 async def find_meme(trigger: str, data: Message) -> Optional[Meme]:
@@ -286,7 +288,9 @@ async def find_meme(trigger: str, data: Message) -> Optional[Meme]:
 
 async def emoji_verify(data: Message):
     if await tool_is_close(data.instance.appid, 1, 1, 8, data.channel_id):
-        return
+        return False, 0
+    split_msg = None
+    meme = None
     if type(data.instance) is CQHttpBotInstance:
         gocq = GOCQTools(data.instance, data=data)
         msg: List = copy.deepcopy(data.message.get('message', []))
@@ -297,15 +301,14 @@ async def emoji_verify(data: Message):
             # 当回复目标是自己时，去除隐式at自己
             msg_id = msg[0]['data']['id']
             source_msg = await gocq.get_message(int(msg_id))
-            source_qq = str(source_msg['sender']['user_id'])
-            # 隐式at和显示at之间还有一个文本空格
-            while len(msg) > 1 and (
-                msg[1]['type'] == 'at' or msg[1]['type'] == 'text' and msg[1]['data']['text'].strip() == ''):
-                if msg[1]['type'] == 'at' and msg[1]['data']['qq'] == source_qq or msg[1]['type'] == 'text' and \
-                    msg[1]['data']['text'].strip() == '':
-                    msg.pop(1)
-                else:
-                    break
+            if source_msg:
+                source_qq = str(source_msg['sender']['user_id'])
+                # 隐式at和显示at之间还有一个文本空格
+                while len(msg) > 1 and (msg[1]['type'] == 'at' or msg[1]['type'] == 'text' and msg[1]['data']['text'].strip() == ''):
+                    if msg[1]['type'] == 'at' and msg[1]['data']['qq'] == source_qq or msg[1]['type'] == 'text' and msg[1]['data']['text'].strip() == '':
+                        msg.pop(1)
+                    else:
+                        break
         for each_msg in msg:
             if each_msg['type'] != 'text':
                 continue
@@ -340,20 +343,64 @@ async def emoji_verify(data: Message):
             log.debug('表情被关闭, 跳过')
             return False, 0
 
-        split_msg = await split_msg_v11_cq(data, meme, trigger)
+        split_msg = await split_msg_v11_cq(data, msg, meme, trigger)
+    elif type(data.instance) is MiraiBotInstance:
+        msg: List = copy.deepcopy(data.message.get('messageChain', []))
+        if not msg:
+            log.debug('消息内容为空, 跳过')
+            return False, 0
+        # 第一条永远为Source
+        msg.pop(0)
+        if msg[0]['type'] == 'Quote':
+            # 去除回复消息自动at
+            if msg[1]['type'] == 'At' and msg[1]['target'] == msg[0]['senderId']:
+                msg.pop(1)
+        for each_msg in msg:
+            if each_msg['type'] != 'Plain':
+                continue
+            if not each_msg['text'].startswith(UserConfig.meme_command_start()):
+                continue
+            trigger = each_msg
+            break
+        else:
+            for each_msg in msg:
+                if each_msg['type'] != 'Plain':
+                    continue
+                trigger = each_msg
+                break
+            else:
+                log.debug('空触发, 跳过')
+                return False, 0
 
+        uid = get_user_id(data)
+        try:
+            trigger_text: str = trigger['text'].split()[0]
+        except IndexError:
+            log.debug('空触发, 跳过')
+            return False, 0
+        if not trigger_text.startswith(UserConfig.meme_command_start()):
+            log.debug('非前缀触发, 跳过')
+            return False, 0
+        meme = await find_meme(trigger_text.replace(UserConfig.meme_command_start(), '').strip(), data)
+        if meme is None:
+            log.debug('未找到表情, 跳过')
+            return False, 0
+        if not meme_manager.check(uid, meme.key):
+            log.debug('表情被关闭, 跳过')
+            return False, 0
+
+        split_msg = await split_msg_v11_mirai(data, msg, meme, trigger)
+    if split_msg and meme:
         raw_texts: List[str] = split_msg['texts']
         users: List[User] = split_msg['users']
         image_sources: List[ImageSource] = split_msg['image_sources']
 
         args: Dict[str, Any] = {}
-
         if meme.params_type.args_type:
             try:
                 parse_result = meme.parse_args(raw_texts)
             except ArgParserExit:
-                await data.send(Chain(data).text('参数解析错误'))
-                return False, 0
+                return True, 5, Chain(data).text('参数解析错误')
             texts = parse_result['texts']
             parse_result.pop('texts')
             args = parse_result
@@ -362,29 +409,25 @@ async def emoji_verify(data: Message):
 
         if not meme.params_type.min_images <= len(image_sources) <= meme.params_type.max_images:
             if UserConfig.memes_prompt_params_error():
-                await data.send(
-                    Chain(data).text(
-                        f'输入图片数量不符，图片数量应为 {meme.params_type.min_images}'
-                        + (
-                            f' ~ {meme.params_type.max_images}'
-                            if meme.params_type.max_images > meme.params_type.min_images
-                            else ''
-                        ) + f', 实际数量为{len(image_sources)}'
-                    )
+                return True, 5, Chain(data).text(
+                    f'输入图片数量不符，图片数量应为 {meme.params_type.min_images}'
+                    + (
+                        f' ~ {meme.params_type.max_images}'
+                        if meme.params_type.max_images > meme.params_type.min_images
+                        else ''
+                    ) + f', 实际数量为{len(image_sources)}'
                 )
             return False, 0
 
         if not (meme.params_type.min_texts <= len(texts) <= meme.params_type.max_texts):
             if UserConfig.memes_prompt_params_error():
-                await data.send(
-                    Chain(data).text(
-                        f'输入文字数量不符，文字数量应为 {meme.params_type.min_texts}'
-                        + (
-                            f' ~ {meme.params_type.max_texts}'
-                            if meme.params_type.max_texts > meme.params_type.min_texts
-                            else ''
-                        ) + f', 实际数量为{len(raw_texts)}'
-                    )
+                return True, 5, Chain(data).text(
+                    f'输入文字数量不符，文字数量应为 {meme.params_type.min_texts}'
+                    + (
+                        f' ~ {meme.params_type.max_texts}'
+                        if meme.params_type.max_texts > meme.params_type.min_texts
+                        else ''
+                    ) + f', 实际数量为{len(raw_texts)}'
                 )
             return False, 0
 

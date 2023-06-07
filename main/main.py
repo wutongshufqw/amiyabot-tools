@@ -1,3 +1,4 @@
+import datetime
 import os
 import shutil
 import time
@@ -36,7 +37,7 @@ class ToolsPluginInstance(AmiyaBotPluginInstance):
 
 bot = ToolsPluginInstance(
     name='小工具合集',
-    version='1.9.5',
+    version='1.9.6.2',
     plugin_id='amiyabot-tools',
     plugin_type='tools',
     description='AmiyaBot小工具合集 By 天基',
@@ -61,6 +62,11 @@ def install_main(bot_: ToolsPluginInstance):
     create_dir(avatar_dir)
     create_dir(poke_)
     create_dir(bottle_dir)
+    if bot.get_config('nickname'):
+        if not bot.get_config('nickname').get('runtime'):
+            bot_config = bot.get_config('nickname')
+            bot_config['runtime'] = datetime.datetime.now().astimezone().isoformat()
+            bot.set_config('nickname', bot_config)
 
 
 def create_file(path: str, mode: str = 'a'):

@@ -325,6 +325,72 @@
                     }
                 }
             }
+        },
+        "nickname": {
+            "title": "兔兔群昵称",
+            "description": "昵称配置, 注意，对“更新规则”的修改重启后才会生效, 对“昵称”的修改立即生效",
+            "type": "object",
+            "required": [
+                "runtime",
+                "update",
+                "nickname"
+            ],
+            "properties": {
+                "runtime": {
+                    "title": "开始运行日期",
+                    "description": "兔兔开始运行的日期，本属性自动生成, 清空即可重置",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "update": {
+                    "title": "更新规则",
+                    "description": "兔兔昵称更新周期: none-禁用, once-启动时更新, circle-循环更新, reply-回复时更新",
+                    "enum": [
+                        "none",
+                        "once",
+                        "circle",
+                        "reply"
+                    ]
+                },
+                "interval": {
+                    "title": "更新间隔",
+                    "description": "当更新规则为circle时生效，单位为秒",
+                    "type": "number",
+                    "minimum": 0
+                },
+                "nickname": {
+                    "title": "昵称",
+                    "description": "昵称配置: 按照列表顺序拼接成完整昵称",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "type",
+                            "content"
+                        ],
+                        "properties": {
+                            "type": {
+                                "title": "类型",
+                                "description": "昵称类型: text-文本, day-运行天数, hour-运行小时, minute-运行分钟, second-运行秒数, reply_time-回复时间, reply_name-回复昵称",
+                                "enum": [
+                                    "text",
+                                    "day",
+                                    "hour",
+                                    "minute",
+                                    "second",
+                                    "reply_time",
+                                    "reply_name"
+                                ]
+                            },
+                            "content": {
+                                "title": "内容",
+                                "description": "昵称内容: type为text时为原始内容, 其他类型将会替换content中的‘%’, 例如选择day时, 当content为‘%天’时将会替换为‘{day}天",
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

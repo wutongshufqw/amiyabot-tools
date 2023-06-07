@@ -69,5 +69,16 @@
             "appid": 123456,
             "operator": 654321
         }
-    ]
+    ],
+    "nickname": {
+        "runtime": "",
+        "update": "none",
+        "interval": 0,
+        "nickname": [
+            {
+                "type": "text",
+                "content": "兔兔"
+            }
+        ]
+    }
 }

@@ -1,4 +1,8 @@
 import asyncio
+import datetime
+from typing import Optional
+
+import dateutil.parser as dp
 import threading
 import os
 import sys
@@ -14,7 +18,6 @@ from ..api import MiraiTools, GOCQTools
 from ..utils import SQLHelper
 
 special_title_cd = {}
-TIME = 1684986476
 
 
 # 重启
@@ -479,3 +482,98 @@ async def bot_mute_event(event: Event, instance: CQHttpBotInstance):
     gocq = GOCQTools(instance, event=event)
     await gocq.quit_group(event.data['group_id'])
     return
+
+
+def build_nickname(config_: dict, nick: Optional[str] = None) -> str:
+    runtime = config_.get('runtime', datetime.datetime.now().astimezone().isoformat())
+    TIME = int(dp.parse(runtime).timestamp())
+    time_ = int(time.time() - TIME)
+    day = time_ // 86400
+    hour = time_ // 3600 % 24
+    minute = time_ // 60 % 60
+    second = time_ % 60
+    nickname_list = config_.get('nickname', [{'type': 'text', 'content': '兔兔'}])
+    nickname = ''
+    for n in nickname_list:
+        if n['type'] == 'text':
+            nickname += n['content']
+            continue
+        if n['type'] == 'day':
+            nickname += n['content'].replace('%', str(day))
+            continue
+        if n['type'] == 'hour':
+            nickname += n['content'].replace('%', str(hour))
+            continue
+        if n['type'] == 'minute':
+            nickname += n['content'].replace('%', str(minute))
+            continue
+        if n['type'] == 'second':
+            nickname += n['content'].replace('%', str(second))
+            continue
+        if n['type'] == 'reply_name' and nick:
+            nickname += n['content'].replace('%', nick)
+            continue
+        if n['type'] == 'reply_time':
+            nickname += n['content'].replace('%', datetime.datetime.now().strftime('%H:%M:%S'))
+            continue
+    return nickname
+
+
+def update_nickname():
+    config_ = bot.get_config('nickname')
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    async def loop_func():
+        for item in main_bot:
+            if type(item.instance) == CQHttpBotInstance:
+                gocq = GOCQTools(item.instance)
+                groups = await gocq.get_group_list()
+                for group in groups:
+                    nickname = build_nickname(config_)
+                    await gocq.set_group_card(group['group_id'], item.appid, nickname)
+                    log.info(f'更新群名片: {group["group_name"]}({group["group_id"]})')
+                    await asyncio.sleep(2)
+            if type(item.instance) == MiraiBotInstance:
+                mirai = MiraiTools(item.instance)
+                groups = await mirai.get_group_list()
+                for group in groups:
+                    nickname = build_nickname(config_)
+                    await mirai.set_group_card(group['group']['id'], item.appid, nickname)
+                    log.info(f'更新群名片: {group["group"]["name"]}({group["group"]["id"]})')
+                    await asyncio.sleep(2)
+        if config_["update"] == "circle":
+            await asyncio.sleep(config_.get("interval", 0))
+
+    while True:
+        loop.run_until_complete(loop_func())
+        log.info("更新群名片完成-----------------------------------------------------------------------------------------")
+        if config_["update"] == "once":
+            break
+
+
+# noinspection PyUnusedLocal
+@bot.timed_task(each=10, sub_tag='update_nickname')
+async def _(instance: BotHandlerFactory):
+    update = bot.get_config('nickname').get('update', 'none')
+    if update == 'none':
+        bot.remove_timed_task('update_nickname')
+        return
+    t = threading.Thread(target=update_nickname)
+    t.start()
+    bot.remove_timed_task('update_nickname')
+
+
+@bot.message_before_send
+async def _(chain: Chain, *_):
+    config_ = bot.get_config('nickname')
+    if config_['update'] != 'reply':
+        return chain
+    nickname = build_nickname(config_, nick=chain.data.nickname)
+    helper = None
+    if type(chain.data.instance) == CQHttpBotInstance:
+        helper = GOCQTools(chain.data.instance)
+    elif type(chain.data.instance) == MiraiBotInstance:
+        helper = MiraiTools(chain.data.instance)
+    await helper.set_group_card(chain.data.channel_id, chain.data.instance.appid, nickname)
+    return chain
