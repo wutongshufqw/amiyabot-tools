@@ -9,7 +9,7 @@ from amiyabot.builtin.messageChain import Chain
 from amiyabot.factory import BotHandlerFactory
 from amiyabot.network.download import download_async
 
-from core import AmiyaBotPluginInstance, log
+from core import AmiyaBotPluginInstance
 from core.database.bot import *
 from core.util import create_dir, read_yaml
 from ..config import tools, avatar_dir, bottle_dir
@@ -37,7 +37,7 @@ class ToolsPluginInstance(AmiyaBotPluginInstance):
 
 bot = ToolsPluginInstance(
     name='小工具合集',
-    version='1.9.6.2',
+    version='1.9.7.4',
     plugin_id='amiyabot-tools',
     plugin_type='tools',
     description='AmiyaBot小工具合集 By 天基',
@@ -63,10 +63,12 @@ def install_main(bot_: ToolsPluginInstance):
     create_dir(poke_)
     create_dir(bottle_dir)
     if bot.get_config('nickname'):
-        if not bot.get_config('nickname').get('runtime'):
-            bot_config = bot.get_config('nickname')
+        bot_config = bot.get_config('nickname')
+        if not bot_config.get('runtime'):
             bot_config['runtime'] = datetime.datetime.now().astimezone().isoformat()
-            bot.set_config('nickname', bot_config)
+        if not bot_config.get('diy'):
+            bot_config['diy'] = []
+        bot.set_config('nickname', bot_config)
 
 
 def create_file(path: str, mode: str = 'a'):
@@ -122,7 +124,8 @@ async def update_tools(data: Message):
     return
 
 
-async def tool_is_close(appid: str, main_id: int, sub_id: int, sub_sub_id: int, channel_id: Optional[str] = None) -> bool:
+async def tool_is_close(appid: str, main_id: int, sub_id: int, sub_sub_id: int,
+                        channel_id: Optional[str] = None) -> bool:
     tool = await SQLHelper.get_tool(appid, main_id, sub_id, sub_sub_id)
     flag = False
     if tool is not None and tool.open:

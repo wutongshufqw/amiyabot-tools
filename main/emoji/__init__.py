@@ -1,6 +1,9 @@
+import asyncio
 import logging
 import os
 import shutil
+import threading
+import time
 
 from core import log
 
@@ -37,10 +40,12 @@ if import_success:
     import traceback
 
     from amiyabot import Message, Chain, CQHttpBotInstance, MiraiBotInstance
+    from amiyabot.factory import BotHandlerFactory
     from amiyabot.util import run_in_thread_pool
     from io import BytesIO
     from itertools import chain
     from meme_generator import Meme
+    from meme_generator.download import check_resources
     from meme_generator.exception import (
         TextOverLength,
         ArgMismatch,
@@ -53,7 +58,7 @@ if import_success:
     from pypinyin import pinyin, Style
     from typing import Optional, List, Dict, Any
 
-    from .config import UserConfig
+    from .config import user_config
     from .data_source import ImageSource, User, UserInfo
     from .depends import split_msg_v11_cq, split_msg_v11_mirai
     from .exception import PlatformUnsupportedError, NetworkError
@@ -63,15 +68,17 @@ if import_success:
     from ..main import bot, tool_is_close
 
     from ...api import GOCQTools
+    from ...utils import run_async
 
     logging.disable(logging.DEBUG)
 
 memes_cache_dir = Path(os.path.join(os.path.dirname(__file__), 'memes_cache_dir'))
-emoji_help = """
+emoji_help_text = """
 `兔兔头像表情包帮助` 发送插件帮助<br/>
 `兔兔表情包制作` 发送全部功能帮助<br/>
 `兔兔表情帮助 + 表情` 发送选定表情功能帮助<br/>
-`兔兔更新表情包制作` 更新表情包资源
+`兔兔更新表情包制作` 更新表情包资源<br/>
+`兔兔(全局)[禁/启]用表情` + 表情` 禁用/启用群聊中指定表情
 """
 prefix = ['阿米娅', '阿米兔', '兔兔', '兔子', '小兔子', 'Amiya', 'amiya']
 
@@ -89,7 +96,7 @@ async def help_text(data: Message):
     match = re.match(r'^(.*?)头像表情包帮助$', data.text_original)
     if await tool_is_close(data.instance.appid, 1, 1, 8, data.channel_id) or not check_prefix(match):
         return
-    return Chain(data).markdown(emoji_help)
+    return Chain(data).markdown(emoji_help_text)
 
 
 def get_user_id(data: Message, permit: Optional[int] = None):
@@ -128,7 +135,7 @@ async def emoji_make(data: Message):
             f.write(img.getvalue())
     else:
         img = BytesIO(meme_list_cache_file.read_bytes())
-    msg = f"触发方式：“{UserConfig.meme_command_start()}关键词 + 图片/文字”\n发送 “兔兔表情详情 + 关键词” 查看表情参数和预览\n目前支持的表情列表："
+    msg = f"触发方式：“{user_config.meme_command_start}关键词 + 图片/文字”\n发送 “兔兔表情详情 + 关键词” 查看表情参数和预览\n目前支持的表情列表："
     return Chain(data).text(msg).image(img.getvalue())
 
 
@@ -148,88 +155,33 @@ async def emoji_help(data: Message):
     return Chain(data).text(info).image(img.getvalue())
 
 
-@bot.on_message(keywords=re.compile(r'^(.*?)禁用表情(.*)$'), level=5)
+@bot.on_message(keywords=re.compile(r'^(.*?)(全局)?([禁启]用)表情(.*)$'), level=5)
 async def emoji_disable(data: Message):
-    match = re.match(r'^(.*?)禁用表情(.*)$', data.text_original)
+    match = re.match(r'^(.*?)(全局)?([禁启]用)表情(.*)$', data.text_original)
     if await tool_is_close(data.instance.appid, 1, 1, 8, data.channel_id) or not check_prefix(match):
         return
-    if not match.group(2):
-        return Chain(data).text("请发送 “兔兔禁用表情 + 关键词” 禁用表情(关键词用空格隔开)")
-    meme_names = match.group(2).strip().split()
+    if not match.group(4):
+        return Chain(data).text(f"请发送 “兔兔{'全局' if match.group(2) else ''}{match.group(3)}表情 + 关键词” {match.group(3)}表情(关键词用空格隔开)")
+    meme_names = match.group(4).strip().split()
     user_id = get_user_id(data)
-    results = meme_manager.block(user_id, meme_names)
+    if match.group(3) == '启用':
+        if match.group(2):
+            results = meme_manager.change_mode(MemeMode.BLACK, meme_names)
+        else:
+            results = meme_manager.unblock(user_id, meme_names)
+    else:
+        if match.group(2):
+            results = meme_manager.change_mode(MemeMode.WHITE, meme_names)
+        else:
+            results = meme_manager.block(user_id, meme_names)
     messages = []
     for name, result in results.items():
         if result == ActionResult.SUCCESS:
-            message = f'表情 {name} 禁用成功'
+            message = f'表情 {name} {"已设为"+ ("黑" if match.group(3) =="启用" else "白") + "名单模式" if match.group(2) else match.group(3)+ "成功"}'
         elif result == ActionResult.NOT_FOUND:
             message = f'表情 {name} 不存在'
         else:
-            message = f'表情 {name} 禁用失败'
-        messages.append(message)
-    return Chain(data).text('\n'.join(messages))
-
-
-@bot.on_message(keywords=re.compile(r'^(.*?)启用表情(.*)$'), level=5)
-async def emoji_enable(data: Message):
-    match = re.match(r'^(.*?)启用表情(.*)$', data.text_original)
-    if await tool_is_close(data.instance.appid, 1, 1, 8, data.channel_id) or not check_prefix(match):
-        return
-    if not match.group(2):
-        return Chain(data).text("请发送 “兔兔启用表情 + 关键词” 启用表情(关键词用空格隔开)")
-    meme_names = match.group(2).strip().split()
-    user_id = get_user_id(data)
-    results = meme_manager.unblock(user_id, meme_names)
-    messages = []
-    for name, result in results.items():
-        if result == ActionResult.SUCCESS:
-            message = f'表情 {name} 启用成功'
-        elif result == ActionResult.NOT_FOUND:
-            message = f'表情 {name} 不存在'
-        else:
-            message = f'表情 {name} 启用失败'
-        messages.append(message)
-    return Chain(data).text('\n'.join(messages))
-
-
-@bot.on_message(keywords=re.compile(r'^(.*?)全局禁用表情(.*)$'), level=5)
-async def emoji_global_disable(data: Message):
-    match = re.match(r'^(.*?)全局禁用表情(.*)$', data.text_original)
-    if await tool_is_close(data.instance.appid, 1, 1, 8, data.channel_id) or not check_prefix(match):
-        return
-    if not match.group(2):
-        return Chain(data).text("请发送 “兔兔全局禁用表情 + 关键词” 全局禁用表情(关键词用空格隔开)")
-    meme_names = match.group(2).strip().split()
-    results = meme_manager.change_mode(MemeMode.WHITE, meme_names)
-    messages = []
-    for name, result in results.items():
-        if result == ActionResult.SUCCESS:
-            message = f'表情 {name} 已设为白名单模式'
-        elif result == ActionResult.NOT_FOUND:
-            message = f'表情 {name} 不存在'
-        else:
-            message = f'表情 {name} 设置失败'
-        messages.append(message)
-    return Chain(data).text('\n'.join(messages))
-
-
-@bot.on_message(keywords=re.compile(r'^(.*?)全局启用表情(.*)$'), level=5)
-async def emoji_global_enable(data: Message):
-    match = re.match(r'^(.*?)全局启用表情(.*)$', data.text_original)
-    if await tool_is_close(data.instance.appid, 1, 1, 8, data.channel_id) or not check_prefix(match):
-        return
-    if not match.group(2):
-        return Chain(data).text("请发送 “兔兔全局启用表情 + 关键词” 全局启用表情(关键词用空格隔开)")
-    meme_names = match.group(2).strip().split()
-    results = meme_manager.change_mode(MemeMode.BLACK, meme_names)
-    messages = []
-    for name, result in results.items():
-        if result == ActionResult.SUCCESS:
-            message = f'表情 {name} 已设为黑名单模式'
-        elif result == ActionResult.NOT_FOUND:
-            message = f'表情 {name} 不存在'
-        else:
-            message = f'表情 {name} 设置失败'
+            message = f'表情 {name} {"设置" if match.group(2) else match.group(3)}失败'
         messages.append(message)
     return Chain(data).text('\n'.join(messages))
 
@@ -312,7 +264,7 @@ async def emoji_verify(data: Message):
         for each_msg in msg:
             if each_msg['type'] != 'text':
                 continue
-            if not each_msg['data']['text'].startswith(UserConfig.meme_command_start()):
+            if not each_msg['data']['text'].startswith(user_config.meme_command_start):
                 continue
             trigger = each_msg
             break
@@ -332,10 +284,10 @@ async def emoji_verify(data: Message):
         except IndexError:
             log.debug('空触发, 跳过')
             return False, 0
-        if not trigger_text.startswith(UserConfig.meme_command_start()):
+        if not trigger_text.startswith(user_config.meme_command_start):
             log.debug('非前缀触发, 跳过')
             return False, 0
-        meme = await find_meme(trigger_text.replace(UserConfig.meme_command_start(), '').strip(), data)
+        meme = await find_meme(trigger_text.replace(user_config.meme_command_start, '').strip(), data)
         if meme is None:
             log.debug('未找到表情, 跳过')
             return False, 0
@@ -358,7 +310,7 @@ async def emoji_verify(data: Message):
         for each_msg in msg:
             if each_msg['type'] != 'Plain':
                 continue
-            if not each_msg['text'].startswith(UserConfig.meme_command_start()):
+            if not each_msg['text'].startswith(user_config.meme_command_start):
                 continue
             trigger = each_msg
             break
@@ -378,10 +330,10 @@ async def emoji_verify(data: Message):
         except IndexError:
             log.debug('空触发, 跳过')
             return False, 0
-        if not trigger_text.startswith(UserConfig.meme_command_start()):
+        if not trigger_text.startswith(user_config.meme_command_start):
             log.debug('非前缀触发, 跳过')
             return False, 0
-        meme = await find_meme(trigger_text.replace(UserConfig.meme_command_start(), '').strip(), data)
+        meme = await find_meme(trigger_text.replace(user_config.meme_command_start, '').strip(), data)
         if meme is None:
             log.debug('未找到表情, 跳过')
             return False, 0
@@ -408,7 +360,7 @@ async def emoji_verify(data: Message):
             texts = raw_texts
 
         if not meme.params_type.min_images <= len(image_sources) <= meme.params_type.max_images:
-            if UserConfig.memes_prompt_params_error():
+            if user_config.memes_prompt_params_error:
                 return True, 5, Chain(data).text(
                     f'输入图片数量不符，图片数量应为 {meme.params_type.min_images}'
                     + (
@@ -420,7 +372,7 @@ async def emoji_verify(data: Message):
             return False, 0
 
         if not (meme.params_type.min_texts <= len(texts) <= meme.params_type.max_texts):
-            if UserConfig.memes_prompt_params_error():
+            if user_config.memes_prompt_params_error:
                 return True, 5, Chain(data).text(
                     f'输入文字数量不符，文字数量应为 {meme.params_type.min_texts}'
                     + (
@@ -444,3 +396,23 @@ async def emoji(data: Message):
     msg = data.verify.keypoint
     if msg:
         return msg
+
+
+@bot.on_message(keywords=re.compile(r'^(.*?)更新表情包制作$'))
+async def update_meme_user(data: Message):
+    match = re.match(r'^(.*?)更新表情包制作$', data.text_original)
+    if await tool_is_close(data.instance.appid, 1, 1, 8, data.channel_id) or not check_prefix(match):
+        return
+    start = time.time()
+    await check_resources()
+    end = time.time()
+    return Chain(data).text(f'更新完成, 耗时{end - start:.2f}秒')
+
+
+# noinspection PyUnusedLocal
+@bot.timed_task(each=1, sub_tag='meme_update')
+async def meme_update(instance: BotHandlerFactory):
+    bot.remove_timed_task('meme_update')
+    if user_config.memes_check_resources_on_startup:
+        log.info('正在检查资源文件更新...')
+        run_async(check_resources)

@@ -1,31 +1,45 @@
 import asyncio
 import datetime
-from typing import Optional
+import re
+from typing import Optional, Union
 
-import dateutil.parser as dp
-import threading
 import os
 import sys
 import time
 
+from core import Admin, bot as main_bot, GitAutomation, log
+
+try:
+    import psutil
+except ImportError:
+    try:
+        import pip
+
+        pip.main(['install', 'psutil'])
+        import psutil
+    except ImportError:
+        pip = None
+        psutil = None
+        log.warning('你使用的是exe部署，无法获取CPU及内存使用率')
+
 from amiyabot import Message, Chain, MiraiBotInstance, CQHttpBotInstance, Event, Equal
 from amiyabot.factory import BotHandlerFactory
 
-from core import Admin, bot as main_bot, GitAutomation, log
 from .main import bot, tool_is_close
 
 from ..api import MiraiTools, GOCQTools
-from ..utils import SQLHelper
+from ..utils import SQLHelper, run_async
 
 special_title_cd = {}
+global_dict = {}
 
 
 # 重启
-@bot.on_message(keywords=Equal('兔兔重启'), check_prefix=False, direct_only=True, level=5)
+@bot.on_message(keywords=Equal('兔兔重启'), check_prefix=False, allow_direct=True, level=5)
 async def restart(data: Message):
     if await tool_is_close(data.instance.appid, 2, 1, 1):
         return
-    config_ = bot.get_config('restart')
+    config_ = bot.get_config('superuser')
     if config_ is not None and int(data.user_id) in config_:
         await data.send(Chain(data, at=False).text('重启中...'))
         os.execl(sys.executable, sys.executable, *sys.argv)
@@ -62,17 +76,20 @@ async def new_friend_request(event: Event, instance: MiraiBotInstance):
         return
     operators = bot.get_config('operators')
     operator = None
+    auto = False
     for o in operators:
         if str(o.get('appid')) == instance.appid:
             operator = o['operator']
+            auto = o['auto_friend']
             break
     if operator is None:
         return
     mirai = MiraiTools(instance, event=event)
-    await mirai.new_friend_request(operator)
-    await SQLHelper.add_friend(instance.appid, 'mirai', nickname=event.data['nick'], event_id=event.data['eventId'],
-                               from_id=event.data['fromId'], group_id=event.data['groupId'],
-                               message=event.data['message'])
+    await mirai.new_friend_request(operator, auto)
+    if not auto:
+        await SQLHelper.add_friend(instance.appid, 'mirai', nickname=event.data['nick'], event_id=event.data['eventId'],
+                                   from_id=event.data['fromId'], group_id=event.data['groupId'],
+                                   message=event.data['message'])
     return
 
 
@@ -82,16 +99,19 @@ async def new_friend_request(event: Event, instance: CQHttpBotInstance):
         return
     operators = bot.get_config('operators')
     operator = None
+    auto = False
     for o in operators:
         if str(o.get('appid')) == instance.appid:
             operator = o['operator']
+            auto = o['auto_friend']
             break
     if operator is None:
         return
     gocq = GOCQTools(instance, event=event)
-    nickname = await gocq.new_friend_request(operator)
-    await SQLHelper.add_friend(instance.appid, 'gocq', nickname=nickname, flag=event.data['flag'],
-                               user_id=event.data['user_id'], comment=event.data['comment'])
+    nickname = await gocq.new_friend_request(operator, auto)
+    if not auto:
+        await SQLHelper.add_friend(instance.appid, 'gocq', nickname=nickname, flag=event.data['flag'],
+                                   user_id=event.data['user_id'], comment=event.data['comment'])
     return
 
 
@@ -446,18 +466,22 @@ async def clear_new_friends(data: Message):
 
 
 async def update_resource(data: Message):
-    if data.text_original != '更新资源' or await tool_is_close(data.instance.appid, 2, 1, 4):
+    keyword = bot.get_config('update_pool', '更新资源')
+    if data.text_original != keyword or await tool_is_close(data.instance.appid, 2, 1, 4):
         return False, 0
     if bool(Admin.get_or_none(account=data.user_id)):
+        start = time.time()
         await data.send(Chain(data).text('开始更新卡池图片...'))
         git_path = 'resource/plugins/gacha/pool'
         git_url = 'https://gitlab.com/wutongshufqw/arknights-pool.git'
         GitAutomation(git_path, git_url).update()
-        await data.send(Chain(data).text('更新完成'))
+        end = time.time()
+        await data.send(Chain(data).text(f'更新完成, 耗时{end - start:.2f}s'))
     return False, 0
 
 
 # 更新卡池图片
+# noinspection PyUnusedLocal
 @bot.on_message(verify=update_resource, check_prefix=False, allow_direct=True)
 async def update_gacha_pool(data: Message):
     pass
@@ -484,92 +508,114 @@ async def bot_mute_event(event: Event, instance: CQHttpBotInstance):
     return
 
 
-def build_nickname(config_: dict, nick: Optional[str] = None) -> str:
-    runtime = config_.get('runtime', datetime.datetime.now().astimezone().isoformat())
-    TIME = int(dp.parse(runtime).timestamp())
+def build_nickname(nick: Optional[str] = None) -> str:
+    config_ = bot.get_config('nickname')
+    runtime = config_.get('runtime')
+    try:
+        TIME = int(datetime.datetime.strptime(runtime, '%Y-%m-%dT%H:%M:%S.%f%z').timestamp())
+    except ValueError:
+        runtime = datetime.datetime.now().astimezone().isoformat()
+        config_['runtime'] = runtime
+        bot.set_config('nickname', config_)
+        TIME = int(datetime.datetime.strptime(runtime, '%Y-%m-%dT%H:%M:%S%z').timestamp())
     time_ = int(time.time() - TIME)
     day = time_ // 86400
     hour = time_ // 3600 % 24
     minute = time_ // 60 % 60
     second = time_ % 60
     nickname_list = config_.get('nickname', [{'type': 'text', 'content': '兔兔'}])
+    diy = config_.get('diy', [])
     nickname = ''
     for n in nickname_list:
         if n['type'] == 'text':
             nickname += n['content']
-            continue
-        if n['type'] == 'day':
+        elif n['type'] == 'day':
             nickname += n['content'].replace('%', str(day))
-            continue
-        if n['type'] == 'hour':
+        elif n['type'] == 'hour':
             nickname += n['content'].replace('%', str(hour))
-            continue
-        if n['type'] == 'minute':
+        elif n['type'] == 'minute':
             nickname += n['content'].replace('%', str(minute))
-            continue
-        if n['type'] == 'second':
+        elif n['type'] == 'second':
             nickname += n['content'].replace('%', str(second))
-            continue
-        if n['type'] == 'reply_name' and nick:
+        elif n['type'] == 'reply_name' and nick:
             nickname += n['content'].replace('%', nick)
-            continue
-        if n['type'] == 'reply_time':
+        elif n['type'] == 'reply_time':
             nickname += n['content'].replace('%', datetime.datetime.now().strftime('%H:%M:%S'))
-            continue
+        elif n['type'] == 'mem_use':
+            if psutil:
+                nickname += n['content'].replace('%', str(psutil.virtual_memory().percent))
+            else:
+                nickname += n['content'].replace('%', 'NaN')
+        elif n['type'] == 'cpu_use':
+            if psutil:
+                nickname += n['content'].replace('%', str(psutil.cpu_percent()))
+            else:
+                nickname += n['content'].replace('%', 'NaN')
+        elif n['type'] == 'diy':
+            keywords = n['content'].split(':')
+            if len(keywords) == 2:
+                index = int(keywords[0]) - 1
+                if index < len(diy):
+                    local = {}
+                    try:
+                        code = diy[index].replace('\\n', '\n')
+                        exec(code, {}, local)
+                        nickname += str(local.get(keywords[1], ''))
+                    except Exception as e:
+                        log.error(f'自定义昵称错误: {e}')
     return nickname
 
 
-def update_nickname():
-    config_ = bot.get_config('nickname')
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-    async def loop_func():
-        for item in main_bot:
-            if type(item.instance) == CQHttpBotInstance:
-                gocq = GOCQTools(item.instance)
-                groups = await gocq.get_group_list()
-                for group in groups:
-                    nickname = build_nickname(config_)
-                    await gocq.set_group_card(group['group_id'], item.appid, nickname)
-                    log.info(f'更新群名片: {group["group_name"]}({group["group_id"]})')
-                    await asyncio.sleep(2)
-            if type(item.instance) == MiraiBotInstance:
-                mirai = MiraiTools(item.instance)
-                groups = await mirai.get_group_list()
-                for group in groups:
-                    nickname = build_nickname(config_)
-                    await mirai.set_group_card(group['group']['id'], item.appid, nickname)
-                    log.info(f'更新群名片: {group["group"]["name"]}({group["group"]["id"]})')
-                    await asyncio.sleep(2)
-        if config_["update"] == "circle":
-            await asyncio.sleep(config_.get("interval", 0))
-
-    while True:
-        loop.run_until_complete(loop_func())
-        log.info("更新群名片完成-----------------------------------------------------------------------------------------")
-        if config_["update"] == "once":
-            break
-
-
+# 修改群名片
 # noinspection PyUnusedLocal
 @bot.timed_task(each=10, sub_tag='update_nickname')
-async def _(instance: BotHandlerFactory):
+async def update_nickname(instance: BotHandlerFactory):
+    async def _update_nickname():
+        config_ = bot.get_config('nickname')
+
+        async def loop_func():
+            for item in main_bot:
+                if type(item.instance) == CQHttpBotInstance:
+                    gocq = GOCQTools(item.instance)
+                    groups = await gocq.get_group_list()
+                    if groups:
+                        for group in groups:
+                            nickname = build_nickname()
+                            await gocq.set_group_card(group['group_id'], item.appid, nickname)
+                            log.info(f'更新群名片: {group["group_name"]}({group["group_id"]})')
+                            await asyncio.sleep(5)
+                elif type(item.instance) == MiraiBotInstance:
+                    mirai = MiraiTools(item.instance)
+                    groups = await mirai.get_group_list()
+                    if groups:
+                        for group in groups:
+                            nickname = build_nickname()
+                            await mirai.set_group_card(group['group']['id'], item.appid, nickname)
+                            log.info(f'更新群名片: {group["group"]["name"]}({group["group"]["id"]})')
+                            await asyncio.sleep(5)
+            if config_["update"] == "circle":
+                await asyncio.sleep(config_.get("interval", 0))
+
+        while True:
+            await loop_func()
+            log.info("-----群名片更新完成-----")
+            if config_["update"] == "once":
+                return
+
+    bot.remove_timed_task('update_nickname')
     update = bot.get_config('nickname').get('update', 'none')
     if update == 'none':
-        bot.remove_timed_task('update_nickname')
         return
-    t = threading.Thread(target=update_nickname)
-    t.start()
-    bot.remove_timed_task('update_nickname')
+    run_async(_update_nickname)
+    return
 
 
 @bot.message_before_send
-async def _(chain: Chain, *_):
+async def update_nickname_on_reply(chain: Chain, *_):
     config_ = bot.get_config('nickname')
     if config_['update'] != 'reply':
         return chain
-    nickname = build_nickname(config_, nick=chain.data.nickname)
+    nickname = build_nickname(nick=chain.data.nickname)
     helper = None
     if type(chain.data.instance) == CQHttpBotInstance:
         helper = GOCQTools(chain.data.instance)
@@ -577,3 +623,78 @@ async def _(chain: Chain, *_):
         helper = MiraiTools(chain.data.instance)
     await helper.set_group_card(chain.data.channel_id, chain.data.instance.appid, nickname)
     return chain
+
+
+# 群聊人数限制
+# noinspection PyUnusedLocal
+@bot.timed_task(each=10, sub_tag='quit_group')
+async def quit_group(instance: BotHandlerFactory):
+    def check_group(appid: int, group_id: int, member_count: int) -> Union[str, bool]:
+        config_ = bot.get_config('memberLimit')
+        message = config_.get('message', '')
+        blacklist = config_.get('blacklist', [])
+        if group_id in blacklist:
+            return True
+        whitelist = config_.get('whitelist', [])
+        if group_id in whitelist:
+            return False
+        limit = config_.get('limit', [])
+        for item in limit:
+            if item['appid'] == appid:
+                if item['min'] <= member_count and (item['max'] == -1 or member_count <= item['max']):
+                    return False
+                else:
+                    if message:
+                        return message.replace('{min}', str(item['min'])).replace('{max}', str(
+                            item['max'] if item['max'] != -1 else '∞'))
+                    else:
+                        return True
+        return False
+
+    async def _quit_group():
+        async def loop_func():
+            for item in main_bot:
+                accounts = bot.get_config('operators')
+                operator = None
+                for account in accounts:
+                    if account['appid'] == int(item.appid):
+                        operator = str(account['operator'])
+                        break
+                if type(item.instance) == CQHttpBotInstance:
+                    gocq = GOCQTools(item.instance)
+                    groups = await gocq.get_group_list()
+                    for group in groups:
+                        if group['group_id'] == 491353154:
+                            print('test')
+                        msg = check_group(int(item.appid), group['group_id'], group['member_count'])
+                        if msg:
+                            if type(msg) == str:
+                                await item.send_message(Chain().text(msg), channel_id=str(group['group_id']))
+                            await gocq.quit_group(group['group_id'], True)
+                            if bot.get_config('memberLimit').get('tip', True):
+                                await item.send_message(
+                                    Chain().text(f'群聊: {group["group_name"]}({group["group_id"]})已退群'),
+                                    user_id=operator)
+                if type(item.instance) == MiraiBotInstance:
+                    mirai = MiraiTools(item.instance)
+                    groups = await mirai.get_group_list()
+                    for group in groups:
+                        members = mirai.get_group_member_list(group['id'])
+                        msg = check_group(int(item.appid), group['id'], len(members))
+                        if msg:
+                            if type(msg) == str:
+                                await item.send_message(Chain().text(msg), channel_id=str(group['id']))
+                            await mirai.quit_group(group['id'])
+                            if bot.get_config('memberLimit').get('tip', True):
+                                await item.send_message(
+                                    Chain().text(f'群聊: {group["group_name"]}({group["group_id"]})已退群'),
+                                    user_id=operator)
+
+        while bot.get_config('memberLimit').get('enable', False):
+            await loop_func()
+            log.info("-----退出群聊完成-----")
+            await asyncio.sleep(bot.get_config('memberLimit').get('interval', 60) * 60)
+
+    bot.remove_timed_task('quit_group')
+    run_async(_quit_group)
+    return

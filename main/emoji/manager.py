@@ -10,7 +10,7 @@ from pathlib import Path
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 
-from .config import UserConfig
+from .config import user_config
 
 
 config_file_path = Path(os.path.join(os.path.dirname(__file__), 'config.yml'))
@@ -42,7 +42,7 @@ class MemeManager:
         self.__meme_list: Dict[str, MemeConfig] = {}
         self.memes = list(
             filter(
-                lambda meme: meme.key not in UserConfig.meme_disabled_list(),
+                lambda meme: meme.key not in user_config.meme_disabled_list,
                 sorted(get_memes(), key=lambda meme: meme.key)
             )
         )
@@ -134,7 +134,7 @@ class MemeManager:
                 except UnicodeDecodeError:
                     log.warning('表情列表解析失败，将重新生成')
             try:
-                meme_list = {name: MemeConfig.parse_obj(config) for name, config in raw_list.items()}
+                meme_list = {name: MemeConfig.parse_obj(config) for name, config in iter(raw_list.items())}
             except AttributeError:
                 meme_list = {}
                 log.warning('表情列表解析失败，将重新生成')
@@ -143,7 +143,7 @@ class MemeManager:
 
     def __dump(self):
         self.__path.parent.mkdir(parents=True, exist_ok=True)
-        meme_list = {name: config.dict() for name, config in self.__meme_list.items()}
+        meme_list = {name: config.dict() for name, config in iter(self.__meme_list.items())}
         with self.__path.open('w', encoding='utf-8') as f:
             yaml.safe_dump(meme_list, f, allow_unicode=True)
 

@@ -5,14 +5,15 @@
     "properties": {
         "functions": {
             "title": "功能加载项",
-            "description": "功能加载项配置, 注意, 该配置项是从代码层面实现配置项的动态加载, 因此修改后需要重新启动兔兔才会生效, 此配置项优先级高于小工具全局管理",
+            "description": "功能加载项配置, 重载插件后生效",
             "type": "object",
             "required": [
                 "default",
                 "emoji",
                 "game",
                 "group",
-                "admin"
+                "admin",
+                "test"
             ],
             "properties": {
                 "default": {
@@ -22,7 +23,7 @@
                 },
                 "emoji": {
                     "title": "表情包",
-                    "description": "表情包功能",
+                    "description": "表情包功能，exe部署请勿开启",
                     "type": "boolean"
                 },
                 "game": {
@@ -31,13 +32,18 @@
                     "type": "boolean"
                 },
                 "group": {
-                    "title": "群管理",
-                    "description": "群管理功能",
+                    "title": "群应用",
+                    "description": "群应用功能",
                     "type": "boolean"
                 },
                 "admin": {
                     "title": "管理员",
                     "description": "管理员功能",
+                    "type": "boolean"
+                },
+                "test": {
+                    "title": "试验",
+                    "description": "测试功能，谨慎开启，本部分功能说明请查看插件test.md",
                     "type": "boolean"
                 }
             }
@@ -251,8 +257,8 @@
                             "type": "boolean"
                         },
                         "appid": {
-                            "title": "实例ID",
-                            "description": "负责处理审核消息的实例QQ",
+                            "title": "BotID",
+                            "description": "负责处理审核消息的BotQQ",
                             "type": "integer"
                         },
                         "group": {
@@ -292,9 +298,9 @@
                 }
             }
         },
-        "restart": {
-            "title": "重启",
-            "description": "重启实例的管理员账号",
+        "superuser": {
+            "title": "超级用户",
+            "description": "可以控制兔兔的重启, 小工具插件的重载",
             "type": "array",
             "items": {
                 "type": "integer"
@@ -308,31 +314,44 @@
                 "type": "object",
                 "required": [
                     "appid",
-                    "operator"
+                    "operator",
+                    "auto_friend"
                 ],
                 "properties": {
                     "appid": {
-                        "title": "实例ID",
-                        "description": "实例QQ号",
+                        "title": "Bot",
+                        "description": "BotQQ号",
                         "type": "integer",
                         "minimum": 0
                     },
                     "operator": {
-                        "title": "操作员ID",
+                        "title": "操作员",
                         "description": "操作员QQ号",
                         "type": "integer",
                         "minimum": 0
+                    },
+                    "auto_friend": {
+                        "title": "自动通过好友申请",
+                        "description": "是否自动同意好友申请",
+                        "type": "boolean"
                     }
                 }
             }
         },
+        "update_pool": {
+            "title": "卡池图片",
+            "description": "自定义更新词",
+            "type": "string"
+        },
         "nickname": {
             "title": "兔兔群昵称",
-            "description": "昵称配置, 注意，对“更新规则”的修改重启后才会生效, 对“昵称”的修改立即生效",
+            "description": "昵称配置, 注意，对“更新规则”的修改重载插件后生效, 对“昵称”的修改立即生效",
             "type": "object",
             "required": [
                 "runtime",
                 "update",
+                "interval",
+                "diy",
                 "nickname"
             ],
             "properties": {
@@ -358,6 +377,14 @@
                     "type": "number",
                     "minimum": 0
                 },
+                "diy": {
+                    "title": "自定义",
+                    "description": "自定义python表达式, 例如我想获取当前时间，可以填写import time\\nvalue=time.strftime('%H:%M:%S', time.localtime())",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "nickname": {
                     "title": "昵称",
                     "description": "昵称配置: 按照列表顺序拼接成完整昵称",
@@ -371,7 +398,7 @@
                         "properties": {
                             "type": {
                                 "title": "类型",
-                                "description": "昵称类型: text-文本, day-运行天数, hour-运行小时, minute-运行分钟, second-运行秒数, reply_time-回复时间, reply_name-回复昵称",
+                                "description": "昵称类型",
                                 "enum": [
                                     "text",
                                     "day",
@@ -379,16 +406,102 @@
                                     "minute",
                                     "second",
                                     "reply_time",
-                                    "reply_name"
+                                    "reply_name",
+                                    "mem_use",
+                                    "cpu_use",
+                                    "diy"
                                 ]
                             },
                             "content": {
                                 "title": "内容",
-                                "description": "昵称内容: type为text时为原始内容, 其他类型将会替换content中的‘%’, 例如选择day时, 当content为‘%天’时将会替换为‘{day}天",
+                                "description": "昵称内容: type为text时为原始内容, 其他类型将会替换content中的‘%’, 例如选择day时, 当content为‘%天’时将会替换为‘{day}天, diy内容请参考插件文档",
                                 "type": "string"
                             }
                         }
                     }
+                }
+            }
+        },
+        "memberLimit": {
+            "title": "群成员限制",
+            "description": "群成员限制配置, 对每个Bot的配置相互独立, 若白名单群号与黑名单群号有重复, 则黑名单优先, 本配置实时生效",
+            "type": "object",
+            "required": [
+                "enable",
+                "limit",
+                "blacklist",
+                "whitelist",
+                "interval",
+                "tip"
+            ],
+            "properties": {
+                "enable": {
+                    "title": "是否开启",
+                    "description": "是否开启群成员限制, 启用本功能需要重载插件后生效, 关闭本功能时立即生效",
+                    "type": "boolean"
+                },
+                "limit": {
+                    "title": "群成员界限",
+                    "description": "控制兔兔进入的群聊人数，请注意，兔兔为群主时该配置无效",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "appid",
+                            "min",
+                            "max"
+                        ],
+                        "properties": {
+                            "appid": {
+                                "title": "Bot账号",
+                                "description": "BotQQ号",
+                                "type": "integer"
+                            },
+                            "min": {
+                                "title": "最小值",
+                                "description": "最小值",
+                                "type": "integer",
+                                "minimum": 0
+                            },
+                            "max": {
+                                "title": "最大值",
+                                "description": "最大值，-1表示无限制",
+                                "type": "integer",
+                                "minimum": -1
+                            }
+                        }
+                    }
+                },
+                "blacklist": {
+                    "title": "黑名单",
+                    "description": "在黑名单中的群聊将会自动退出",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "whitelist": {
+                    "title": "白名单",
+                    "description": "在白名单中的群聊将会忽略群成员限制",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "interval": {
+                    "title": "检查间隔",
+                    "description": "检查群成员数量的间隔，单位为分钟, 可以为小数",
+                    "type": "number"
+                },
+                "message": {
+                    "title": "提示消息",
+                    "description": "当群成员数量不满足界限发送的消息，为空时不发送，使用{min}和{max}分别代替最小值和最大值",
+                    "type": "string"
+                },
+                "tip": {
+                    "title": "提示",
+                    "description": "退群时是否提示，提示规则参照上方操作员配置",
+                    "type": "boolean"
                 }
             }
         }

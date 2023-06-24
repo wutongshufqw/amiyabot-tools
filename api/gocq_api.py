@@ -101,14 +101,18 @@ class GOCQTools:
         else:
             return False
 
-    async def new_friend_request(self, operator: int) -> Union[str, dict]:
+    async def new_friend_request(self, operator: int, auto: bool = False) -> str:
         data = self.event.data
         text = f'请求人QQ：{data["user_id"]}\n'
         user = await self.get_stranger_info(data["user_id"])
         text += f'请求人昵称：{user.get("nickname")}\n'
         text += f'请求信息：{data["comment"]}'
-        message = Chain().text(
-            f'收到新的好友请求\n{text}\n发送"兔兔同意好友 [QQ号] [好友备注]"以同意请求\n发送"兔兔拒绝好友 [QQ号]"以拒绝请求')
+        message = Chain().text(f'收到新的好友请求\n{text}')
+        if auto:
+            self.new_friend_request_handle(data["flag"], True)
+            message = message.text('\n已自动同意请求')
+        else:
+            message = message.text('\n发送"兔兔同意好友 [QQ号] [好友备注]"以同意请求\n发送"兔兔拒绝好友 [QQ号]"以拒绝请求')
         await self.instance.send_message(message, str(operator))
         return user.get("nickname")
 

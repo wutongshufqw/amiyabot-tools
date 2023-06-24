@@ -69,6 +69,9 @@ class MiraiHttpHelper:
     async def user_profile(self, target: int):
         return await self.get('/userProfile', {'sessionKey': self.session, 'target': target})
 
+    async def message_from_id(self, message_id: int, target: int):
+        return await self.get('/messageFromId', {'sessionKey': self.session, 'target': target, 'messageId': message_id})
+
     async def mute(self, target: int, member_id: int, time: int):
         return await self.post(
             '/mute',
@@ -108,15 +111,19 @@ class MiraiTools:
         else:
             return False
 
-    async def new_friend_request(self, operator: int) -> Union[bool, dict]:
+    async def new_friend_request(self, operator: int, auto: bool = False) -> Union[bool, dict]:
         data = self.event.data
         text = f'请求人QQ：{data["fromId"]}\n请求人昵称：{data["nick"]}\n'
         if data['groupId'] != 0:
             text += f'来自群聊：{data["groupId"]}\n'
         text += f'请求信息：{data["message"]}'
-        message = Chain().text(
-            f'收到新的好友请求\n{text}\n发送"兔兔同意好友 [QQ号] [回复信息]"以同意请求\n发送"兔兔拒绝好友 [QQ号]"以拒绝请求\n'
-            f'发送"兔兔拉黑好友 [QQ号]"以拉黑请求')
+        message = Chain().text(f'收到新的好友请求\n{text}')
+        if auto:
+            self.new_friend_request_handle(data['eventId'], data['fromId'], data['groupId'], 0)
+            message = message.text('\n已自动同意请求')
+        else:
+            message = message.text(
+                '\n发送"兔兔同意好友 [QQ号] [回复信息]"以同意请求\n发送"兔兔拒绝好友 [QQ号]"以拒绝请求\n发送"兔兔拉黑好友 [QQ号]"以拉黑请求')
         await self.instance.send_message(message, str(operator))
         return True
 
@@ -200,6 +207,14 @@ class MiraiTools:
         result = json.loads(res)
         if result.get('nickname'):
             return result
+        else:
+            return False
+
+    async def get_message(self, message_id: int, target: int) -> Union[bool, dict]:
+        res = await self.helper.message_from_id(message_id, target)
+        result = json.loads(res)
+        if result['code'] == 0:
+            return result['data']
         else:
             return False
 

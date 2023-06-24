@@ -5,7 +5,7 @@ from typing import Dict, List
 from amiyabot import Message, CQHttpBotInstance, MiraiBotInstance
 from meme_generator import Meme
 
-from .config import UserConfig
+from .config import user_config
 from .data_source import User, ImageSource, user_avatar, QQUser, ImageUrl, check_user_id
 from .utils import split_text
 
@@ -58,7 +58,7 @@ async def split_msg_v11_cq(data: Message, message: List, meme: Meme, trigger: Di
 
     msg = copy.deepcopy(message)
     trigger_text_with_rigger: str = trigger['data']['text'].strip()
-    trigger_text = re.sub(rf'^{UserConfig.meme_command_start()}\S+', '', trigger_text_with_rigger).strip()
+    trigger_text = re.sub(rf'^{user_config.meme_command_start}\S+', '', trigger_text_with_rigger).strip()
     trigger_text_seg = [{'type': 'text', 'data': {'text': trigger_text}}]
     for i, m in enumerate(msg):
         if m['type'] == 'text' and m['data']['text'] == trigger['data']['text']:
@@ -114,17 +114,17 @@ async def split_msg_v11_cq(data: Message, message: List, meme: Meme, trigger: Di
         users.insert(0, QQUser(data.instance, data, int(data.user_id)))
 
     # 当所需图片数为 1 且没有已指定图片时，使用发送者的头像
-    if UserConfig.memes_use_sender_when_no_image() and meme.params_type.min_images == 1 and len(image_sources) == 0:
+    if user_config.memes_use_sender_when_no_image and meme.params_type.min_images == 1 and len(image_sources) == 0:
         image_sources.append(user_avatar(data.user_id))
         users.append(QQUser(data.instance, data, int(data.user_id)))
 
     # 当所需文字数 >0 且没有输入文字时，使用默认文字
-    if UserConfig.memes_use_default_when_no_text() and meme.params_type.min_texts > 0 and len(texts) == 0:
+    if user_config.memes_use_default_when_no_text and meme.params_type.min_texts > 0 and len(texts) == 0:
         texts = meme.params_type.default_texts
 
     # 当所需文字数 > 0 且没有输入文字，且仅存在一个参数时，使用默认文字
     # 为了防止误触发，参数必须放在最后一位，且该参数必须是bool，且参数前缀必须是--
-    if UserConfig.memes_use_default_when_no_text() and meme.params_type.min_texts > 0 and len(texts) == 1 and texts[-1].startswith("--"):
+    if user_config.memes_use_default_when_no_text and meme.params_type.min_texts > 0 and len(texts) == 1 and texts[-1].startswith("--"):
         temp = copy.deepcopy(meme.params_type.default_texts)
         temp.extend(texts)
         texts = temp
@@ -143,7 +143,7 @@ async def split_msg_v11_mirai(data: Message, message: List, meme: Meme, trigger:
 
     msg = copy.deepcopy(message)
     trigger_text_with_rigger: str = trigger['text'].strip()
-    trigger_text = re.sub(rf'^{UserConfig.meme_command_start()}\S+', '', trigger_text_with_rigger).strip()
+    trigger_text = re.sub(rf'^{user_config.meme_command_start}\S+', '', trigger_text_with_rigger).strip()
     trigger_text_seg = [{'type': 'Plain', 'text': trigger_text}]
     for i, m in enumerate(msg):
         if m['type'] == 'Plain' and m['text'] == trigger['text']:
@@ -199,17 +199,17 @@ async def split_msg_v11_mirai(data: Message, message: List, meme: Meme, trigger:
         users.insert(0, QQUser(data.instance, data, int(data.user_id)))
 
     # 当所需图片数为 1 且没有已指定图片时，使用发送者的头像
-    if UserConfig.memes_use_sender_when_no_image() and meme.params_type.min_images == 1 and len(image_sources) == 0:
+    if user_config.memes_use_sender_when_no_image and meme.params_type.min_images == 1 and len(image_sources) == 0:
         image_sources.append(user_avatar(data.user_id))
         users.append(QQUser(data.instance, data, int(data.user_id)))
 
     # 当所需文字数 >0 且没有输入文字时，使用默认文字
-    if UserConfig.memes_use_default_when_no_text() and meme.params_type.min_texts > 0 and len(texts) == 0:
+    if user_config.memes_use_default_when_no_text and meme.params_type.min_texts > 0 and len(texts) == 0:
         texts = meme.params_type.default_texts
 
     # 当所需文字数 > 0 且没有输入文字，且仅存在一个参数时，使用默认文字
     # 为了防止误触发，参数必须放在最后一位，且该参数必须是bool，且参数前缀必须是--
-    if UserConfig.memes_use_default_when_no_text() and meme.params_type.min_texts > 0 and len(texts) == 1 and texts[-1].startswith("--"):
+    if user_config.memes_use_default_when_no_text and meme.params_type.min_texts > 0 and len(texts) == 1 and texts[-1].startswith("--"):
         temp = copy.deepcopy(meme.params_type.default_texts)
         temp.extend(texts)
         texts = temp

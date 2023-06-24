@@ -4,7 +4,8 @@
         "emoji": false,
         "game": false,
         "group": false,
-        "admin": false
+        "admin": false,
+        "test": false
     },
     "poke": {
         "cd": 3,
@@ -61,24 +62,36 @@
         "cd": 1800,
         "guest": false
     },
-    "restart": [
+    "superuser": [
         123456
     ],
     "operators": [
         {
             "appid": 123456,
-            "operator": 654321
+            "operator": 654321,
+            "auto_friend": false
         }
     ],
+    "update_pool": "更新资源",
     "nickname": {
         "runtime": "",
         "update": "none",
         "interval": 0,
+        "diy": [],
         "nickname": [
             {
                 "type": "text",
                 "content": "兔兔"
             }
         ]
+    },
+    "memberLimit": {
+        "enable": false,
+        "limit": [],
+        "whitelist": [],
+        "blacklist": [],
+        "interval": 60,
+        "message": "抱歉，当前群聊人数不满足要求：{min}~{max}，兔兔即将退出~",
+        "tip": true
     }
 }

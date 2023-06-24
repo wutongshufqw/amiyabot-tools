@@ -368,12 +368,14 @@ async def gomoku(data: Message):
 
 
 # 漂流瓶
-@bot.on_message(keywords=re.compile(r'^.*?(扔|捡|删除|(不)?通过|审核)(所有|全部)?漂流瓶\s?(匿名|不匿|\d+)?\s?([\s\S]*)$'),
-                allow_direct=True, level=6)
+@bot.on_message(
+    keywords=re.compile(r'^.*?(扔|捡|删除|(不)?通过|审核)(所有|全部)?漂流瓶\s?(匿名|不匿|\d+)?\s?([\s\S]*)$'),
+    allow_direct=True, level=6)
 async def bottle(data: Message):
     if await tool_is_close(data.instance.appid, 1, 2, 3, data.channel_id):
         return
-    match = re.match(r'^.*?(扔|捡|删除|(不)?通过|审核)(所有|全部)?漂流瓶\s?(匿名|不匿|\d+)?\s?([\s\S]*)$', data.text_original)
+    match = re.match(r'^.*?(扔|捡|删除|(不)?通过|审核)(所有|全部)?漂流瓶\s?(匿名|不匿|\d+)?\s?([\s\S]*)$',
+                     data.text_original)
     config_ = bot.get_config('bottle')
     if not match:
         return
@@ -417,7 +419,8 @@ async def bottle(data: Message):
                             picture = pictures.split(';')
                             for pic in picture:
                                 message.image(f'{bottle_dir}{pic}')
-                        message.text(f'回复"兔兔通过漂流瓶 {res.id}"通过审核\n回复"兔兔不通过漂流瓶 {res.id}"不通过审核\n回复"兔兔审核漂流瓶"查看待审核的漂流瓶')
+                        message.text(
+                            f'回复"兔兔通过漂流瓶 {res.id}"通过审核\n回复"兔兔不通过漂流瓶 {res.id}"不通过审核\n回复"兔兔审核漂流瓶"查看待审核的漂流瓶')
                         await instance.send_message(message, channel_id=str(group))
                     await data.send(Chain(data).text('兔兔已经把你的漂流瓶扔出去了~, 正在等待审核'))
                 else:
@@ -514,8 +517,10 @@ async def tarot(data: Message):
     if await tool_is_close(data.instance.appid, 1, 2, 4, data.channel_id):
         return
     tarot_ = Tarot(data.user_id)
-    await data.send(Chain(data).text(f'{data.nickname}就这样你走入了占卜店中，少女面带着微笑说着：“博士既然来了，不如抽三张塔罗牌看看今'
-                                     f'天的运势哦~”(输入三次“选择[数字]”抽取三张塔罗牌，如“选择1”)'))
+    await data.send(
+        Chain(data, reference=True, at=False).text(
+            f'{data.nickname}就这样你走入了占卜店中，少女面带着微笑说着：“博士既然来了，不'
+            f'如抽三张塔罗牌看看今天的运势哦~”(输入三次“选择[数字]”抽取三张塔罗牌，如“选择1”)'))
     draw_bytes = Tarot.get_bytes(await run_in_thread_pool(Tarot.draw_tarot, tarot_.list_tarot))
     await data.send(Chain(data).image(draw_bytes))
 

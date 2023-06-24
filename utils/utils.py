@@ -1,3 +1,4 @@
+import asyncio
 import zipfile
 from pathlib import Path
 
@@ -28,3 +29,15 @@ def unzip_file(oriPath, goalPath):
             else:
                 # 文件夹创建
                 new_name.mkdir(parents=True, exist_ok=True)
+
+
+def run_async(func):
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop and loop.is_running():
+        loop.create_task(func())
+    else:
+        asyncio.run(func())
