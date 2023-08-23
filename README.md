@@ -1,46 +1,52 @@
-﻿> 版本需求: amiyabot>=1.5.1
+﻿<div align="center">
+    <img src="https://i0.hdslb.com/bfs/album/9dda3f738e0745014f2e878b8f0a4a21f341d877.png" width="180" height="180" alt="AmiyaBotLogo">
+</div>
 
-## 公告栏
+<div align="center">
 
-- 1.9.7更新：
+# 小工具合集
 
-    1. 1.9.7.0更新：
-        - 提供限制群聊人数功能
-    2. 1.9.7.1更新：
-        - 新增重载插件，需要amiyabot>=1.5.1
-        - 修复删除启动时间后修改群名片报错问题
-    3. 1.9.7.2更新：
-        - 修复主进程结束后群名片修改线程及退群线程未正常关闭的问题
-    4. 1.9.7.3更新：
-        - 增加试验性功能，部分功能可能会在将来正式发布
-            - 注：试验性功能可能存在预料之外的问题，若出现问题可以在频道中反馈
-        - 兔兔重启功能允许群聊使用
-        - 新增自动通过好友申请功能，兔兔仍然会发送好友申请消息，但是会自动通过
-        - 适配exe, 昵称修改功能无法使用cpu, mem使用率功能
-        - 修复上一个版本卸载失败的问题，安装前你需要手动删除`plugins/amiyabot-tools-1_9_7_2`
-          文件夹和`plugins/amiyabot-tools-1_9_7_2.zip`文件
-    5. 1.9.7.4更新
-        - **最终修复**卸载失败的问题，安装前你需要手动删除`plugins/amiyabot-tools-1_9_7_3`
-          文件夹和`plugins/amiyabot-tools-1_9_7_3.zip`文件
-        - 优化塔罗牌和合成表情的参数获取配置，提高响应速度
-        - 修复Mirai无法获取回复消息的问题
-        - 修复表情包加载失败的问题
-        - 修复表情包说明加载失败的问题
-        - 更新卡池资源添加计时
-        - 支持自定义更新卡池图片前缀
-        - 群昵称支持自定义代码
+✨ AmiyaBot 小工具合集插件，自行编写并移植多个NoneBot2插件 ✨
+
+<p align="center">
+    <img alt="license" src="https://img.shields.io/badge/license-MIT-green">
+    <img src="https://img.shields.io/badge/python-3.8+-blue.svg" alt="Python">
+    <img src="https://img.shields.io/badge/amiyabot-1.5.9+-red.svg" alt="AmiyaBot">
+    <img alt="version" src="https://img.shields.io/badge/version-1.9.8.1-orange">
+    <img alt="commit" src="https://img.shields.io/github/commit-activity/m/wutongshufqw/amiyabot-tools?color=%23ff69b4">
+    <img alt="size" src="https://img.shields.io/github/repo-size/wutongshufqw/amiyabot-tools?color=%23ffeb3b">
+</p>
+</div>
+
+# 🎉 公告栏
+
+1. 1.9.8.0更新：
+   - 扫雷修复
+     - 修复超大地图的报错问题
+     - 拓充扫雷地图大小范围
+     - 添加开局提示
+     - 界面优化
+   - 代码优化
+     - 移除大量无效代码
+     - 优化部分运行逻辑
+     - 修复ai部分的报错
+   - Skland++开始测试！（请参阅test.md)
+2. 1.9.8.1更新：
+   - 新增方舟分类
+     - Skland++将移入该功能分类
+   - 抽象话插件测试
 
 - 注意：
-    1. 从1.9.7.3开始，插件将使用试验性功能进行新功能开发，待功能基本完善后将会发布正式版本
-        - 试验功能可能会伴随着其他功能的Bug修复，因此建议更新，如果你不想使用试验功能，可以关闭试验功能的载入
-        - 试验功能不会加入到小工具全局管理中，且只有超级管理员能够使用
-    2. <font color=Orange>小工具所有功能默认关闭(包括更新后新增的), 请私聊兔兔自行开启</font>
-    3. <font color=Red>**免责声明：伪造消息功能由管理员开启，该功能默认关闭，由于伪造消息而造成的经济，财产，精神损失的与本插件作者无关
-       **</font>
-    4. 插件所有功能进行了模块化，你可以自由选择导入不同的模块，未导入的模块将不会加载以节约服务器资源, 详见控制台
-        - <font color=Orange>注意, 该配置项是从代码层面实现配置项的动态加载, 因此修改后需要重新启动兔兔才会生效,
-          此配置项优先级高于小工具全局管理</font>
-    5. 若字体显示错误请参阅[字体安装](https://github.com/MeetWq/meme-generator/blob/main/docs/install.md)
+
+  1. 从1.9.7.3开始，插件将使用试验性功能进行新功能开发，待功能基本完善后将会发布正式版本
+     - 试验功能可能会伴随着其他功能的Bug修复，因此建议更新，如果你不想使用试验功能，可以关闭试验功能的载入
+     - 试验功能不会加入到小工具全局管理中，且只有超级管理员能够使用
+  2. <font color=Orange>小工具所有功能默认关闭(包括更新后新增的), 请私聊兔兔自行开启 </font>
+  3. <font color=Red>**免责声明：伪造消息功能由管理员开启，该功能默认关闭，由于伪造消息而造成的经济，财产，精神损失的与本插件作者无关** </font>
+  4. 插件所有功能进行了模块化，你可以自由选择导入不同的模块，未导入的模块将不会加载以节约服务器资源, 详见控制台
+     - <font color=Orange>注意, 该配置项是从代码层面实现配置项的动态加载, 因此修改后需要重新启动兔兔才会生效,
+       此配置项优先级高于小工具全局管理</font>
+  5. 若字体显示错误请参阅[字体安装](https://github.com/MeetWq/meme-generator/blob/main/docs/install.md)
 
 > ## 配置项说明
 >
@@ -51,6 +57,7 @@
 >> - `[face [id]]:发送一张Emoji表情，id为表情id，注意id前后无方括号`
 >> - `[emoji]:发送一张存放在emojiPath中的表情`
 >> - `[crazy]: KFC疯狂星期四（仅星期四可以触发）`
+>>
 >
 >> ### 昵称配置类型说明：
 >>
@@ -64,8 +71,20 @@
 >> - `mem_use-内存占用`
 >> - `cpu_use-CPU占用`
 >> - `diy`
-     -自定义内容，使用说明：例如，你在自定义中的第一条写了`import time\nvalue=time.strftime('%H:%M:%S', time.localtime())`
-     ,那么替换部分应当这样写`1:value`其中1表示第自定义的第一条, value表示自定义中定义的value属性, 以:分隔,
-     若前后有文字请使用text类型, 请勿在此填写任何多余内容, 你可以发挥想象, 制作你自己昵称！
+>>   -自定义内容，使用说明：例如，你在自定义中的第一条写了 `import time\nvalue=time.strftime('%H:%M:%S', time.localtime())`
+>>   ,那么替换部分应当这样写 `1:value`其中1表示第自定义的第一条, value表示自定义中定义的value属性, 以:分隔,
+>>   若前后有文字请使用text类型, 请勿在此填写任何多余内容, 你可以发挥想象, 制作你自己昵称！
+>>
 
-[GitHub仓库地址](https://github.com/wutongshufqw/amiyabot-tools)
+# 🎉 特别感谢
+- [AmiyaBot](https://github.com/AmiyaBot/Amiya-Bot): 基于 AmiyaBot 框架的 QQ 聊天机器人
+- [nonebot-plugin-memes](https://github.com/noneplugin/nonebot-plugin-memes): ✨ Nonebot2 表情包制作插件 ✨
+- [nonebot-plugin-remake](https://github.com/noneplugin/nonebot-plugin-remake): 适用于 Nonebot2 的人生重开模拟器
+- [Enhance for Skland](https://github.com/LaviniaFalcone/Enhance-for-Skland): 森空岛（非官方）游戏实时状态查询工具
+- [nonebot-plugin-oddtext](https://github.com/noneplugin/nonebot-plugin-oddtext): Nonebot2 插件，用于抽象话等文本生成
+
+# 许可证
+本项目使用 [MIT](https://choosealicense.com/licenses/mit/) 作为开源许可证
+
+# 仓库
+- [amiyabot-tools](https://github.com/wutongshufqw/amiyabot-tools): AmiyaBot 小工具合集插件，自行编写并移植多个NoneBot2插件

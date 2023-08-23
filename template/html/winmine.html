@@ -21,7 +21,8 @@
                 <div class="blank" v-if="col === -1"></div>
                 <div class="number" v-else-if="col === 0"></div>
                 <div :class="'number number-' + col" v-else-if="col >= 1 && col <=8"><b>{{col}}</b></div>
-                <div class="bomb" v-else-if="col === 9"><b>💣</b></div>
+                <div class="bomb" v-else-if="col === 9 && !data.success"><b>💣</b></div>
+                <div class="success" v-else-if="col === 9 && data.success"><b>💣</b></div>
                 <div class="blank" v-else-if="col === 10"><b>🚩</b></div>
             </td>
             <td class="index-row">{{index}}</td>

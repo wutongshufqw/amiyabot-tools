@@ -1,8 +1,8 @@
-from amiyabot import Message, CQHttpBotInstance, MiraiBotInstance
+from amiyabot import Message, CQHttpBotInstance, MiraiBotInstance, KOOKBotInstance
 from dataclasses import dataclass
 from typing import TypedDict, Union
 
-from ....api import GOCQTools, MiraiTools
+from amiyabot.adapters._adapterApi import RelationType
 
 
 class UserInfo(TypedDict):
@@ -17,22 +17,28 @@ class User:
 
 
 @dataclass
-class QQUser(User):
+class QQGroupUser(User):
     instance: Union[CQHttpBotInstance, MiraiBotInstance]
     data: Message
     user_id: int
 
     async def get_info(self) -> UserInfo:
-        helper = None
-        if type(self.instance) is CQHttpBotInstance:
-            helper = GOCQTools(self.instance, data=self.data)
-        elif type(self.instance) is MiraiBotInstance:
-            helper = MiraiTools(self.instance, data=self.data)
-        if helper is None:
-            raise NotImplementedError
-        info = await helper.get_group_member_info(group_id=int(self.data.channel_id), user_id=int(self.user_id))
-        if not info:
-            info = await helper.get_stranger_info(user_id=int(self.user_id))
-        name = info.get('card', info.get('nickname', ''))
-        gender = info.get('sex', 'unknown').lower()
+        info = await self.instance.api.get_user_info(self.user_id,
+                                                     RelationType.GROUP if self.data.channel_id else RelationType.STRANGER,
+                                                     self.data.channel_id)
+        name = info['nickname']
+        gender = info['gender'].__str__()
+        return UserInfo(name=name, gender=gender)
+
+
+@dataclass
+class KOOKGroupUser(User):
+    instance: KOOKBotInstance
+    data: Message
+    user_id: int
+
+    async def get_info(self) -> UserInfo:
+        info = await self.instance.api.get_user_info(self.user_id, self.data.guild_id)
+        name = info.get('nickname', info['username'])
+        gender = 'unknown'
         return UserInfo(name=name, gender=gender)

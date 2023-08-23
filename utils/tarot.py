@@ -62,7 +62,7 @@ class Resource(object):
 
     @property
     def font(self) -> FreeTypeFont:
-        return ImageFont.truetype(Path(__file__).parent.joinpath("./resource/font/FZDBSJW.TTF").__str__(), 30)
+        return ImageFont.truetype(Path(__file__).parent.joinpath("./resource/fonts/FZDBSJW.ttf").__str__(), 30)
 
     @property
     def tarot_data(self) -> dict:
@@ -134,8 +134,8 @@ class Tarot:
 
     def choose(self, num: int):
         key = list(self.tarot_data[num - 1])[0]
-        Ty = self.tarot_data[num - 1][key]
-        key_result = f'{key}逆位' if Ty else f'{key}正位'
+        ty = self.tarot_data[num - 1][key]
+        key_result = f'{key}逆位' if ty else f'{key}正位'
         self.result.append(key_result)
         if key_result not in self.list_tarot:
             self.list_tarot[num - 1] = key_result

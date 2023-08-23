@@ -1,5 +1,6 @@
 import datetime
 import os
+import re
 import shutil
 import time
 from typing import Optional
@@ -7,24 +8,24 @@ from typing import Optional
 from amiyabot import Message
 from amiyabot.builtin.messageChain import Chain
 from amiyabot.factory import BotHandlerFactory
-from amiyabot.network.download import download_async
 
-from core import AmiyaBotPluginInstance
-from core.database.bot import *
+from core import AmiyaBotPluginInstance, log
+from core.database.bot import Admin, connect_database
 from core.util import create_dir, read_yaml
 from ..config import tools, avatar_dir, bottle_dir
 
 # 对数据库报错的修复
 try:
-    from ..utils import get_saucenao, SQLHelper, convert
+    from ..utils import SQLHelper
 except ValueError as e:
+    log.warning(e.__str__())
     if e.__str__() == 'nickname is not null but has no default':
         import sqlite3
 
         conn = connect_database('resource/plugins/tools/tools.db')
         cursor = conn.cursor()
         cursor.execute('DROP TABLE IF EXISTS new_friends')
-        from ..utils import get_saucenao, SQLHelper, convert
+    from ..utils import SQLHelper
 
 curr_dir = os.path.dirname(__file__)
 recall_list = []
@@ -37,7 +38,7 @@ class ToolsPluginInstance(AmiyaBotPluginInstance):
 
 bot = ToolsPluginInstance(
     name='小工具合集',
-    version='1.9.7.4',
+    version='1.9.8.1',
     plugin_id='amiyabot-tools',
     plugin_type='tools',
     description='AmiyaBot小工具合集 By 天基',
@@ -108,24 +109,48 @@ async def update_tools(data: Message):
     tool_list = await SQLHelper.get_tools_list(data.instance.appid)
     if tool_list is None or len(tool_list) == 0:
         for t in tools:
-            await SQLHelper.add_tool(data.instance.appid, t['main_id'], t['sub_id'], t['sub_sub_id'], t['name'],
-                                     False, bot.version)
+            await SQLHelper.add_tool(
+                data.instance.appid,
+                t['main_id'],
+                t['sub_id'],
+                t['sub_sub_id'],
+                t['name'],
+                False,
+                bot.version,
+            )
     elif tool_list[0].version != bot.version:
         for t in tools:
             flag = True
             for t1 in tool_list:
-                if t['main_id'] == t1.main_id and t['sub_id'] == t1.sub_id and t['sub_sub_id'] == t1.sub_sub_id:
-                    await SQLHelper.update_tool(t1.id, version=bot.version, name=t['name'])
+                if (
+                    t['main_id'] == t1.main_id
+                    and t['sub_id'] == t1.sub_id
+                    and t['sub_sub_id'] == t1.sub_sub_id
+                ):
+                    await SQLHelper.update_tool(
+                        t1.id, version=bot.version, name=t['name']
+                    )
                     flag = False
                     break
             if flag:
-                await SQLHelper.add_tool(data.instance.appid, t['main_id'], t['sub_id'], t['sub_sub_id'], t['name'],
-                                         False, bot.version)
-    return
+                await SQLHelper.add_tool(
+                    data.instance.appid,
+                    t['main_id'],
+                    t['sub_id'],
+                    t['sub_sub_id'],
+                    t['name'],
+                    False,
+                    bot.version,
+                )
 
 
-async def tool_is_close(appid: str, main_id: int, sub_id: int, sub_sub_id: int,
-                        channel_id: Optional[str] = None) -> bool:
+async def tool_is_close(
+    appid: str,
+    main_id: int,
+    sub_id: int,
+    sub_sub_id: int,
+    channel_id: Optional[str] = None,
+) -> bool:
     tool = await SQLHelper.get_tool(appid, main_id, sub_id, sub_sub_id)
     flag = False
     if tool is not None and tool.open:
@@ -137,29 +162,30 @@ async def tool_is_close(appid: str, main_id: int, sub_id: int, sub_sub_id: int,
     return not flag
 
 
-async def download_avatar(user_id: str) -> bytes:
-    url = f"https://q1.qlogo.cn/g?b=qq&nk={user_id}&s=640"
-    data = await download_async(url)
-    if not data or hashlib.md5(data).hexdigest() == "acef72340ac0e914090bd35799f5594e":
-        url = f"https://q1.qlogo.cn/g?b=qq&nk={user_id}&s=100"
-        data = await download_async(url)
-        if not data:
-            raise Exception("下载头像失败")
-    return data
-
-
 async def get_tool_list(appid: str) -> list:
     list_ = await SQLHelper.get_tools_list(appid)
     config_ = bot.get_config('functions')
     tool_list = []
     for t in list_:
-        if config_.get('default', False) and t.main_id == 1 and t.sub_id == 1 and t.sub_sub_id != 8:
+        if (
+            config_.get('default', False)
+            and t.main_id == 1
+            and t.sub_id == 1
+            and t.sub_sub_id != 8
+        ):
             tool_list.append(t)
-        if config_.get('emoji', False) and t.main_id == 1 and t.sub_id == 1 and t.sub_sub_id == 8:
+        if (
+            config_.get('emoji', False)
+            and t.main_id == 1
+            and t.sub_id == 1
+            and t.sub_sub_id == 8
+        ):
             tool_list.append(t)
         if config_.get('game', False) and t.main_id == 1 and t.sub_id == 2:
             tool_list.append(t)
         if config_.get('group', False) and t.main_id == 1 and t.sub_id == 3:
+            tool_list.append(t)
+        if config_.get('arknights', False) and t.main_id == 1 and t.sub_id == 4:
             tool_list.append(t)
         if config_.get('admin', False) and t.main_id == 2 and t.sub_id == 1:
             tool_list.append(t)
@@ -167,7 +193,7 @@ async def get_tool_list(appid: str) -> list:
 
 
 # 功能管理
-@bot.on_message(keywords=['小工具全局管理'], direct_only=True, level=5)
+@bot.on_message(keywords=['小工具全局管理'], allow_direct=True, level=5)
 async def tools_manage(data: Message):
     if bool(Admin.get_or_none(account=data.user_id)):
         await update_tools(data)
@@ -185,7 +211,9 @@ async def tools_manage(data: Message):
                 reply = await data.wait(msg, True, int(limit_time - time.time()))
                 flag = False
             else:
-                reply = await data.wait(force=True, max_time=int(limit_time - time.time()))
+                reply = await data.wait(
+                    force=True, max_time=int(limit_time - time.time())
+                )
             if reply:
                 if reply.text == '退出':
                     msg = Chain(data).text('已退出')
@@ -197,9 +225,14 @@ async def tools_manage(data: Message):
                     index = int(match.group(1))
                     if 0 <= index < len(tool_list):
                         tool_list[index].open = not tool_list[index].open
-                        await SQLHelper.update_tool(tool_list[index].id, open_=tool_list[index].open)
-                        await data.send(Chain(data).text(
-                            f"已{'开启' if tool_list[index].open else '关闭'}{tool_list[index].tool_name}"))
+                        await SQLHelper.update_tool(
+                            tool_list[index].id, open_=tool_list[index].open
+                        )
+                        await data.send(
+                            Chain(data).text(
+                                f"已{'开启' if tool_list[index].open else '关闭'}{tool_list[index].tool_name}"
+                            )
+                        )
                         limit_time = time.time() + 60
                     else:
                         msg = Chain(data).text('输入序号有误')
@@ -209,7 +242,6 @@ async def tools_manage(data: Message):
                 msg = Chain(data).text('已退出')
                 await data.send(msg)
                 break
-    return
 
 
 @bot.on_message(keywords=['小工具管理'], allow_direct=False, level=5)
@@ -237,7 +269,9 @@ async def tools_manage_channel(data: Message):
                 reply = await data.wait(msg, True, int(limit_time - time.time()))
                 flag = False
             else:
-                reply = await data.wait(force=True, max_time=int(limit_time - time.time()))
+                reply = await data.wait(
+                    force=True, max_time=int(limit_time - time.time())
+                )
             if reply:
                 if reply.text == '退出':
                     msg = Chain(data).text('已退出')
@@ -249,9 +283,14 @@ async def tools_manage_channel(data: Message):
                     index = int(match.group(1))
                     if 0 <= index < len(ctl):
                         ctl[index].open = not ctl[index].open
-                        await SQLHelper.update_channel_tool(ctl[index].id, data.channel_id, open_=ctl[index].open)
+                        await SQLHelper.update_channel_tool(
+                            ctl[index].id, data.channel_id, open_=ctl[index].open
+                        )
                         await data.send(
-                            Chain(data).text(f"已{'开启' if ctl[index].open else '关闭'}{ctl[index].tool_name}"))
+                            Chain(data).text(
+                                f"已{'开启' if ctl[index].open else '关闭'}{ctl[index].tool_name}"
+                            )
+                        )
                         limit_time = time.time() + 60
                     else:
                         msg = Chain(data).text('输入序号有误')
@@ -261,7 +300,6 @@ async def tools_manage_channel(data: Message):
                 msg = Chain(data).text('已退出')
                 await data.send(msg)
                 break
-    return
 
 
 # 撤回控制

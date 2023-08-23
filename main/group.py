@@ -117,7 +117,6 @@ async def recall(data: Message):
                 if i['type'] == 'reply':
                     gocq = GOCQTools(data.instance, data=data)
                     await gocq.recall(i)
-    return
 
 
 # 群欢迎消息
@@ -153,7 +152,6 @@ async def member_join(event: Event, instance: MiraiBotInstance):
     if message is not None:
         await instance.send_message(Chain().at(str(event.data['member']['id']), True).text(message.message),
                                     channel_id=str(event.data['member']['group']['id']))
-    return
 
 
 @bot.on_event('notice.group_increase')  # GOCQ群成员入群
@@ -164,7 +162,6 @@ async def member_join(event: Event, instance: CQHttpBotInstance):
     if message is not None:
         await instance.send_message(Chain().at(str(event.data['user_id']), True).text(message.message),
                                     channel_id=str(event.data['group_id']))
-    return
 
 
 @bot.on_message(keywords=['设置退群消息'], allow_direct=False, level=5)
@@ -199,7 +196,6 @@ async def member_quit(event: Event, instance: MiraiBotInstance):
             Chain().text(message.message.replace('{info}', f'{event.data["member"]["memberName"]}({event.data["member"]["id"]})')),
             channel_id=str(event.data['member']['group']['id'])
         )
-    return
 
 
 @bot.on_event('notice.group_decrease')  # GOCQ群成员退群
@@ -213,7 +209,6 @@ async def member_quit(event: Event, instance: CQHttpBotInstance):
             Chain().text(message.message.replace('{info}', f'{info["nickname"]}({event.data["user_id"]})')),
             channel_id=str(event.data['group_id'])
         )
-    return
 
 
 @bot.on_message(keywords=['退群'], allow_direct=False, level=5)
@@ -227,7 +222,6 @@ async def quit_group(data: Message):
         if type(data.instance) is CQHttpBotInstance:
             gocq = GOCQTools(data.instance, data=data)
             await gocq.quit_group(int(data.channel_id))
-    return
 
 
 # 群禁言

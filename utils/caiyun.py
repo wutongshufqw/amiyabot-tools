@@ -7,9 +7,9 @@ from core import log
 model_list = {
     "1": {"name": "小梦0号", "id": "60094a2a9661080dc490f75a"},
     "2": {"name": "小梦1号", "id": "601ac4c9bd931db756e22da6"},
-    "3": {"name": "纯爱小梦", "id": "601f92f60c9aaf5f28a6f908"},
-    "4": {"name": "言情小梦", "id": "601f936f0c9aaf5f28a6f90a"},
-    "5": {"name": "玄幻小梦", "id": "60211134902769d45689bf75"},
+    "3": {"name": "纯爱", "id": "601f92f60c9aaf5f28a6f908"},
+    "4": {"name": "言情", "id": "601f936f0c9aaf5f28a6f90a"},
+    "5": {"name": "玄幻", "id": "60211134902769d45689bf75"},
 }
 
 
@@ -67,9 +67,9 @@ class Caiyun:
         self.model: str = model
         self.token: str = apikey
         self.nid: str = ""
-        self.branchId: str = ""
-        self.nodeId: str = ""
-        self.nodeIds: List[str] = []
+        self.branch_id: str = ""
+        self.node_id: str = ""
+        self.node_ids: List[str] = []
         self.last_result: str = ""
         self.content: str = ""
         self.contents: List[str] = []
@@ -94,15 +94,15 @@ class Caiyun:
         result = await post(url, params)
         data = result['data']
         self.nid = data['nid']
-        self.branchId = data['novel']['branchid']
-        self.nodeId = data['novel']['firstnode']
-        self.nodeIds = [self.nodeId]
+        self.branch_id = data['novel']['branchid']
+        self.node_id = data['novel']['firstnode']
+        self.node_ids = [self.node_id]
 
     async def add_node(self):
         url = f'https://if.caiyunai.com/v2/novel/{self.token}/add_node'
         params = {
-            'nodeids': self.nodeIds,
-            'choose': self.nodeId,
+            'nodeids': self.node_ids,
+            'choose': self.node_id,
             'nid': self.nid,
             'value': self.content,
             'ostype': '',
@@ -123,14 +123,14 @@ class Caiyun:
             'ostype': '',
             'status': 'http',
             'lang': 'zh',
-            'branchid': self.branchId,
-            'lastnode': self.nodeId,
+            'branchid': self.branch_id,
+            'lastnode': self.node_id,
         }
         result = await post(url, params)
         nodes = result['data']['nodes']
-        self.nodeIds = [node['nodeid'] for node in nodes]
+        self.node_ids = [node['nodeid'] for node in nodes]
         self.contents = [node['content'] for node in nodes]
 
     def select(self, num: int):
-        self.nodeId = self.nodeIds[num]
+        self.node_id = self.node_ids[num]
         self.content = self.content + self.contents[num]

@@ -14,7 +14,6 @@ async def poke_message_send(message_, event: Event, instance: CQHttpBotInstance)
         await instance.send_message(message_, channel_id=event.data['group_id'])
     else:
         await instance.send_message(message_, user_id=event.data['sender_id'])
-    return
 
 
 class GOCQHttpHelper:
@@ -183,14 +182,6 @@ class GOCQTools:
 
     async def get_stranger_info(self, user_id: int, no_cache: bool = False) -> Union[bool, dict]:
         res = await self.helper.get_stranger_info(user_id, no_cache)
-        result = json.loads(res)
-        if result['status'] == 'ok':
-            return result['data']
-        else:
-            return False
-
-    async def get_message(self, message_id: int) -> Union[bool, dict]:
-        res = await self.helper.get_msg(message_id)
         result = json.loads(res)
         if result['status'] == 'ok':
             return result['data']

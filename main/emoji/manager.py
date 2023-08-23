@@ -104,8 +104,8 @@ class MemeManager:
         for meme in self.memes:
             if meme_name.lower() == meme.key.lower():
                 return meme
-            for Keyword in sorted(meme.keywords, reverse=True):
-                if meme_name.lower() == Keyword.lower():
+            for keyword_ in sorted(meme.keywords, reverse=True):
+                if meme_name.lower() == keyword_.lower():
                     return meme
             for pattern in meme.patterns:
                 if re.fullmatch(pattern, meme_name, re.IGNORECASE):

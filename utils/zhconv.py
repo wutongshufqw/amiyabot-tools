@@ -272,7 +272,6 @@ def convert(s, locale, update=None):
         for word in update:
             for ch in range(len(word)):
                 newset.add(word[:ch + 1])
-        # pfset = pfset | newset
     ch = []
     N = len(s)
     pos = 0
@@ -382,7 +381,7 @@ def convert_for_mw(s, locale, update=None):
                     # H: Insert a conversion rule without output
                     if f in ('A', 'H'):
                         for r in newrules:
-                            if not r in rules:
+                            if r not in rules:
                                 rules.append(r)
                         if f == 'A':
                             if ':uni' in r:

@@ -85,14 +85,14 @@ long_cool = 0
 short_cool = 0
 
 
-async def get_saucenao(imageURL, api_key: str, proxy: str = None):
+async def get_saucenao(image_url, api_key: str, proxy: str = None):
     global long_cool
     global short_cool
     if time.time() - long_cool < 21600:
         return False, '超过每日API限制, 请六小时后重试...', {}
     if time.time() - short_cool < 30:
         return False, '频率过高! 请30s后重试...', {}
-    image_bytes = await download_async(imageURL)
+    image_bytes = await download_async(image_url)
     if image_bytes is None:
         return False, '下载图片失败...', {}
     image_data = BytesIO(image_bytes)

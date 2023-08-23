@@ -1,8 +1,9 @@
 import hashlib
 
+from amiyabot import BotAdapterProtocol, KOOKBotInstance
 from amiyabot.network.download import download_async
 from dataclasses import dataclass
-from typing import Union
+from typing import Union, Optional
 
 from ..exception import PlatformUnsupportedError
 
@@ -35,6 +36,15 @@ class QQAvatar(ImageSource):
 
 
 @dataclass
+class KOOKAvatar(ImageSource):
+    kook: str
+    instance: KOOKBotInstance
+
+    async def get_image(self) -> bytes:
+        return await self.instance.api.get_user_avatar(self.kook)
+
+
+@dataclass
 class UnsupportedAvatar(ImageSource):
     platform: str
 
@@ -42,5 +52,10 @@ class UnsupportedAvatar(ImageSource):
         raise PlatformUnsupportedError(self.platform)
 
 
-def user_avatar(user_id: Union[str, int]) -> ImageSource:
-    return QQAvatar(qq=str(user_id))
+def user_avatar(user_id: Union[str, int], adapter_type: str = 'QQ', instance: Optional[BotAdapterProtocol] = None) -> ImageSource:
+    if adapter_type == 'QQ':
+        return QQAvatar(qq=str(user_id))
+    elif adapter_type == 'KOOK' and type(instance) is KOOKBotInstance:
+        return KOOKAvatar(kook=str(user_id), instance=instance)
+    else:
+        return UnsupportedAvatar(platform=adapter_type)

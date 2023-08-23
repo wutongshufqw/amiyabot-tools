@@ -30,6 +30,7 @@ tools = [
     {'main_id': 1, 'sub_id': 2, 'sub_sub_id': 2, 'name': '五子棋'},
     {'main_id': 1, 'sub_id': 2, 'sub_sub_id': 3, 'name': '漂流瓶'},
     {'main_id': 1, 'sub_id': 2, 'sub_sub_id': 4, 'name': '塔罗牌'},
+    {'main_id': 1, 'sub_id': 2, 'sub_sub_id': 5, 'name': '人生重开'},
 
     {'main_id': 1, 'sub_id': 3, 'sub_sub_id': 1, 'name': '修改群名片'},
     {'main_id': 1, 'sub_id': 3, 'sub_sub_id': 2, 'name': '修改群头衔'},
@@ -38,6 +39,8 @@ tools = [
     {'main_id': 1, 'sub_id': 3, 'sub_sub_id': 5, 'name': '机器人退群'},
     {'main_id': 1, 'sub_id': 3, 'sub_sub_id': 6, 'name': '群禁言'},
     {'main_id': 1, 'sub_id': 3, 'sub_sub_id': 7, 'name': '退群提示'},
+
+    {'main_id': 1, 'sub_id': 4, 'sub_sub_id': 1, 'name': 'Skland++'},
 
     {'main_id': 2, 'sub_id': 1, 'sub_sub_id': 1, 'name': '兔兔重启'},
     {'main_id': 2, 'sub_id': 1, 'sub_sub_id': 2, 'name': '好友申请'},
@@ -64,4 +67,3 @@ async def poke_message_send(message_, event: Event, instance: BotAdapterProtocol
             await instance.send_message(message_, channel_id=event.data['group_id'])
         else:
             await instance.send_message(message_, user_id=event.data['sender_id'])
-    return

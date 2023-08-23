@@ -1,6 +1,5 @@
 import asyncio
 import datetime
-import re
 from typing import Optional, Union
 
 import os
@@ -20,7 +19,7 @@ except ImportError:
     except ImportError:
         pip = None
         psutil = None
-        log.warning('你使用的是exe部署，无法获取CPU及内存使用率')
+        log.warning('你使用的是exe部署,无法获取CPU及内存使用率')
 
 from amiyabot import Message, Chain, MiraiBotInstance, CQHttpBotInstance, Event, Equal
 from amiyabot.factory import BotHandlerFactory
@@ -32,6 +31,7 @@ from ..utils import SQLHelper, run_async
 
 special_title_cd = {}
 global_dict = {}
+command_error = '请输入正确的指令'
 
 
 # 重启
@@ -58,7 +58,7 @@ async def check_restart(t: int):
 @bot.timed_task(custom=check_restart, sub_tag='tools-restart')
 async def restart_task(instance: BotHandlerFactory):
     bot.remove_timed_task('tools-restart')
-    config_ = bot.get_config('restart')
+    config_ = bot.get_config('superuser')
     if config_ is not None:
         for i in config_:
             for j in main_bot:
@@ -66,7 +66,6 @@ async def restart_task(instance: BotHandlerFactory):
                     await j.send_message(Chain().text('兔兔启动成功或小工具插件安装成功！'), str(i))
                 except AttributeError:
                     pass
-    return
 
 
 # 好友申请
@@ -80,7 +79,7 @@ async def new_friend_request(event: Event, instance: MiraiBotInstance):
     for o in operators:
         if str(o.get('appid')) == instance.appid:
             operator = o['operator']
-            auto = o['auto_friend']
+            auto = o.get('auto_friend', False)
             break
     if operator is None:
         return
@@ -90,7 +89,6 @@ async def new_friend_request(event: Event, instance: MiraiBotInstance):
         await SQLHelper.add_friend(instance.appid, 'mirai', nickname=event.data['nick'], event_id=event.data['eventId'],
                                    from_id=event.data['fromId'], group_id=event.data['groupId'],
                                    message=event.data['message'])
-    return
 
 
 @bot.on_event('request.friend')  # GOCQ新好友申请
@@ -103,7 +101,7 @@ async def new_friend_request(event: Event, instance: CQHttpBotInstance):
     for o in operators:
         if str(o.get('appid')) == instance.appid:
             operator = o['operator']
-            auto = o['auto_friend']
+            auto = o.get('auto_friend', False)
             break
     if operator is None:
         return
@@ -112,7 +110,6 @@ async def new_friend_request(event: Event, instance: CQHttpBotInstance):
     if not auto:
         await SQLHelper.add_friend(instance.appid, 'gocq', nickname=nickname, flag=event.data['flag'],
                                    user_id=event.data['user_id'], comment=event.data['comment'])
-    return
 
 
 @bot.on_message(keywords=['同意好友', '拒绝好友', '拉黑好友'], direct_only=True, level=5)
@@ -154,7 +151,7 @@ async def new_friend_request(data: Message):
             elif msg[0] == '拉黑好友':
                 flag = await mirai.new_friend_request_handle(info.event_id, info.from_id, info.group_id, 2)
             else:
-                return Chain(data).text('请输入正确的指令')
+                return Chain(data).text(command_error)
         if type(data.instance) is CQHttpBotInstance:
             gocq = GOCQTools(data.instance, data=data)
             if len(msg) == 1:
@@ -172,7 +169,7 @@ async def new_friend_request(data: Message):
             elif msg[0] == '拒绝好友':
                 flag = gocq.new_friend_request_handle(info.flag, False)
             else:
-                return Chain(data).text('请输入正确的指令')
+                return Chain(data).text(command_error)
         if flag:
             await SQLHelper.delete_friend(data.instance.appid, msg[1])
             return Chain(data).text('操作成功')
@@ -241,7 +238,6 @@ async def view_new_friends(data: Message):
                             msg = f'QQ号: {info[id_ - 1].user_id}\n昵称: {info[id_ - 1].nickname}\n申请信息: {info[id_ - 1].comment}\n申请时间: {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(info[id_ - 1].date))}'
                     else:
                         break
-    return
 
 
 @bot.on_message(keywords=['清空好友申请'], allow_direct=True, level=5)
@@ -286,7 +282,6 @@ async def group_invite(event: Event, instance: MiraiBotInstance):
     await SQLHelper.add_invite(instance.appid, 'mirai', event.data['groupId'], event_id=event.data['eventId'],
                                from_id=event.data['fromId'], group_name=event.data['groupName'],
                                nick=event.data['nick'], message=event.data['message'])
-    return
 
 
 @bot.on_event('request.group')  # GOCQ群聊邀请
@@ -350,7 +345,7 @@ async def group_invite(data: Message):
                     text = ' '.join(msg[2:])
                     flag = await mirai.group_invite_handle(info.event_id, info.from_id, info.group_id, 1, text)
             else:
-                return Chain(data).text('请输入正确的指令')
+                return Chain(data).text(command_error)
         if type(data.instance) is CQHttpBotInstance:
             gocq = GOCQTools(data.instance, data=data)
             if len(msg) == 1:
@@ -369,7 +364,7 @@ async def group_invite(data: Message):
                     text = ' '.join(msg[2:])
                     flag = await gocq.group_invite_handle(info.flag, True, text)
             else:
-                return Chain(data).text('请输入正确的指令')
+                return Chain(data).text(command_error)
         if flag:
             await SQLHelper.delete_invite(data.instance.appid, msg[1])
             return Chain(data).text('操作成功')
@@ -438,7 +433,6 @@ async def view_group_invites(data: Message):
                             msg = f'邀请人QQ: {info[id_ - 1].user_id}\n群号: {info[id_ - 1].group_id}\n申请时间: {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(info[id_ - 1].date))}'
                     else:
                         break
-    return
 
 
 @bot.on_message(keywords=['清空邀请'], allow_direct=True, level=5)
@@ -468,7 +462,7 @@ async def clear_new_friends(data: Message):
 async def update_resource(data: Message):
     keyword = bot.get_config('update_pool', '更新资源')
     if data.text_original != keyword or await tool_is_close(data.instance.appid, 2, 1, 4):
-        return False, 0
+        return False
     if bool(Admin.get_or_none(account=data.user_id)):
         start = time.time()
         await data.send(Chain(data).text('开始更新卡池图片...'))
@@ -494,7 +488,6 @@ async def bot_mute_event(event: Event, instance: MiraiBotInstance):
         return
     mirai = MiraiTools(instance, event=event)
     await mirai.quit_group(event.data['operator']['group']['id'])
-    return
 
 
 @bot.on_event('notice.group_ban')  # gocq
@@ -505,7 +498,6 @@ async def bot_mute_event(event: Event, instance: CQHttpBotInstance):
         return
     gocq = GOCQTools(instance, event=event)
     await gocq.quit_group(event.data['group_id'])
-    return
 
 
 def build_nickname(nick: Optional[str] = None) -> str:
@@ -574,6 +566,7 @@ async def update_nickname(instance: BotHandlerFactory):
         config_ = bot.get_config('nickname')
 
         async def loop_func():
+            config = bot.get_config('nickname')
             for item in main_bot:
                 if type(item.instance) == CQHttpBotInstance:
                     gocq = GOCQTools(item.instance)
@@ -594,7 +587,7 @@ async def update_nickname(instance: BotHandlerFactory):
                             log.info(f'更新群名片: {group["group"]["name"]}({group["group"]["id"]})')
                             await asyncio.sleep(5)
             if config_["update"] == "circle":
-                await asyncio.sleep(config_.get("interval", 0))
+                await asyncio.sleep(config.get("interval", 0))
 
         while True:
             await loop_func()
@@ -607,21 +600,23 @@ async def update_nickname(instance: BotHandlerFactory):
     if update == 'none':
         return
     run_async(_update_nickname)
-    return
 
 
 @bot.message_before_send
-async def update_nickname_on_reply(chain: Chain, *_):
-    config_ = bot.get_config('nickname')
-    if config_['update'] != 'reply':
-        return chain
-    nickname = build_nickname(nick=chain.data.nickname)
-    helper = None
-    if type(chain.data.instance) == CQHttpBotInstance:
-        helper = GOCQTools(chain.data.instance)
-    elif type(chain.data.instance) == MiraiBotInstance:
-        helper = MiraiTools(chain.data.instance)
-    await helper.set_group_card(chain.data.channel_id, chain.data.instance.appid, nickname)
+async def update_nickname_on_reply(chain: Union[Chain, list], *_):
+    try:
+        config_ = bot.get_config('nickname')
+        if config_['update'] != 'reply':
+            return chain
+        nickname = build_nickname(nick=chain.data.nickname)
+        helper = None
+        if type(chain.data.instance) == CQHttpBotInstance:
+            helper = GOCQTools(chain.data.instance)
+        elif type(chain.data.instance) == MiraiBotInstance:
+            helper = MiraiTools(chain.data.instance)
+        await helper.set_group_card(chain.data.channel_id, chain.data.instance.appid, nickname)
+    except Exception as e:
+        log.warning(f'获取Chain信息发生错误:\n{repr(e)}\n取消群名片更新')
     return chain
 
 
@@ -697,4 +692,3 @@ async def quit_group(instance: BotHandlerFactory):
 
     bot.remove_timed_task('quit_group')
     run_async(_quit_group)
-    return

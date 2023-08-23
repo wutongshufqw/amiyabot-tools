@@ -1,8 +1,7 @@
-import asyncio
 import logging
 import os
+from re import Match
 import shutil
-import threading
 import time
 
 from core import log
@@ -39,7 +38,7 @@ if import_success:
     import re
     import traceback
 
-    from amiyabot import Message, Chain, CQHttpBotInstance, MiraiBotInstance
+    from amiyabot import Message, Chain, CQHttpBotInstance, MiraiBotInstance, KOOKBotInstance
     from amiyabot.factory import BotHandlerFactory
     from amiyabot.util import run_in_thread_pool
     from io import BytesIO
@@ -60,14 +59,13 @@ if import_success:
 
     from .config import user_config
     from .data_source import ImageSource, User, UserInfo
-    from .depends import split_msg_v11_cq, split_msg_v11_mirai
+    from .depends import split_msg_cq, split_msg_mirai, split_msg_kook
     from .exception import PlatformUnsupportedError, NetworkError
     from .manager import meme_manager, ActionResult, MemeMode
     from .utils import meme_info
 
     from ..main import bot, tool_is_close
 
-    from ...api import GOCQTools
     from ...utils import run_async
 
     logging.disable(logging.DEBUG)
@@ -135,7 +133,7 @@ async def emoji_make(data: Message):
             f.write(img.getvalue())
     else:
         img = BytesIO(meme_list_cache_file.read_bytes())
-    msg = f"触发方式：“{user_config.meme_command_start}关键词 + 图片/文字”\n发送 “兔兔表情详情 + 关键词” 查看表情参数和预览\n目前支持的表情列表："
+    msg = f'触发方式:"{user_config.meme_command_start}关键词 + 图片/文字"\n发送 "兔兔表情详情 + 关键词" 查看表情参数和预览\n目前支持的表情列表:'
     return Chain(data).text(msg).image(img.getvalue())
 
 
@@ -145,12 +143,12 @@ async def emoji_help(data: Message):
     if await tool_is_close(data.instance.appid, 1, 1, 8, data.channel_id) or not check_prefix(match):
         return
     if not match.group(3):
-        return Chain(data).text("请发送 “兔兔表情帮助 + 关键词” 查看表情参数和预览")
+        return Chain(data).text('请发送 "兔兔表情帮助 + 关键词" 查看表情参数和预览')
     meme_name = match.group(3).strip()
     if not (meme := meme_manager.find(meme_name)):
-        return Chain(data).text("未找到该表情")
+        return Chain(data).text('未找到该表情')
     info = meme_info(meme)
-    info += '表情预览：\n'
+    info += '表情预览:\n'
     img = await meme.generate_preview()
     return Chain(data).text(info).image(img.getvalue())
 
@@ -161,7 +159,7 @@ async def emoji_disable(data: Message):
     if await tool_is_close(data.instance.appid, 1, 1, 8, data.channel_id) or not check_prefix(match):
         return
     if not match.group(4):
-        return Chain(data).text(f"请发送 “兔兔{'全局' if match.group(2) else ''}{match.group(3)}表情 + 关键词” {match.group(3)}表情(关键词用空格隔开)")
+        return Chain(data).text(f'请发送 "兔兔{"全局" if match.group(2) else ""}{match.group(3)}表情 + 关键词" {match.group(3)}表情(关键词用空格隔开)')
     meme_names = match.group(4).strip().split()
     user_id = get_user_id(data)
     if match.group(3) == '启用':
@@ -175,9 +173,16 @@ async def emoji_disable(data: Message):
         else:
             results = meme_manager.block(user_id, meme_names)
     messages = []
+
+    def mode_to_str(match_: Optional[Match[str]]):
+        if match_:
+            return '黑' if match_.group(3) == '启用' else '白'
+        else:
+            return ''
+
     for name, result in results.items():
         if result == ActionResult.SUCCESS:
-            message = f'表情 {name} {"已设为"+ ("黑" if match.group(3) =="启用" else "白") + "名单模式" if match.group(2) else match.group(3)+ "成功"}'
+            message = f'表情 {name} {"已设为"+ mode_to_str(match) + "名单模式" if match.group(2) else match.group(3)+ "成功"}'
         elif result == ActionResult.NOT_FOUND:
             message = f'表情 {name} 不存在'
         else:
@@ -197,7 +202,7 @@ async def process(data: Message, meme: Meme, image_sources: List[ImageSource], t
         for image_source in image_sources:
             images.append(await image_source.get_image())
     except PlatformUnsupportedError as ex:
-        return Chain(data).text(f'当前平台 “{ex.platform}” 暂不支持获取头像，请使用图片输入'), False
+        return Chain(data).text(f'当前平台 "{ex.platform}" 暂不支持获取头像，请使用图片输入'), False
     except NetworkError:
         log.warning(traceback.format_exc())
         return Chain(data).text('网络错误，请稍后再试'), False
@@ -212,11 +217,11 @@ async def process(data: Message, meme: Meme, image_sources: List[ImageSource], t
         result = await meme(images=images, texts=texts, args=args)
         return Chain(data, at=False).image(result.getvalue()), True
     except TextOverLength as ex:
-        return Chain(data).text(f'文字“{ex.text}”过长'), False
+        return Chain(data).text(f'文字"{ex.text}"过长'), False
     except ArgMismatch:
-        return Chain(data).text(f'参数解析错误'), False
+        return Chain(data).text('参数解析错误'), False
     except TextOrNameNotEnough:
-        return Chain(data).text(f'文字或名字数量不足'), False
+        return Chain(data).text('文字或名字数量不足'), False
     except MemeGeneratorException:
         log.warning(traceback.format_exc())
         return Chain(data).text('出错了，请稍后再试'), False
@@ -243,18 +248,22 @@ async def emoji_verify(data: Message):
         return False, 0
     split_msg = None
     meme = None
+    skip_msg = '消息内容为空, 跳过'
+    none_msg = '未找到表情, 跳过'
+    null_msg = '空触发, 跳过'
+    prefix_msg = '非前缀触发, 跳过'
+    close_msg = '表情被关闭, 跳过'
     if type(data.instance) is CQHttpBotInstance:
-        gocq = GOCQTools(data.instance, data=data)
         msg: List = copy.deepcopy(data.message.get('message', []))
         if not msg:
-            log.debug('消息内容为空, 跳过')
+            log.debug(skip_msg)
             return False, 0
         if msg[0]['type'] == 'reply':
             # 当回复目标是自己时，去除隐式at自己
             msg_id = msg[0]['data']['id']
-            source_msg = await gocq.get_message(int(msg_id))
+            source_msg: Message = await data.instance.api.get_message(msg_id)
             if source_msg:
-                source_qq = str(source_msg['sender']['user_id'])
+                source_qq = source_msg.user_id
                 # 隐式at和显示at之间还有一个文本空格
                 while len(msg) > 1 and (msg[1]['type'] == 'at' or msg[1]['type'] == 'text' and msg[1]['data']['text'].strip() == ''):
                     if msg[1]['type'] == 'at' and msg[1]['data']['qq'] == source_qq or msg[1]['type'] == 'text' and msg[1]['data']['text'].strip() == '':
@@ -275,31 +284,31 @@ async def emoji_verify(data: Message):
                 trigger = each_msg
                 break
             else:
-                log.debug('空触发, 跳过')
+                log.debug(null_msg)
                 return False, 0
 
         uid = get_user_id(data)
         try:
             trigger_text: str = trigger['data']['text'].split()[0]
         except IndexError:
-            log.debug('空触发, 跳过')
+            log.debug(null_msg)
             return False, 0
         if not trigger_text.startswith(user_config.meme_command_start):
-            log.debug('非前缀触发, 跳过')
+            log.debug(prefix_msg)
             return False, 0
         meme = await find_meme(trigger_text.replace(user_config.meme_command_start, '').strip(), data)
         if meme is None:
-            log.debug('未找到表情, 跳过')
+            log.debug(none_msg)
             return False, 0
         if not meme_manager.check(uid, meme.key):
-            log.debug('表情被关闭, 跳过')
+            log.debug(close_msg)
             return False, 0
 
-        split_msg = await split_msg_v11_cq(data, msg, meme, trigger)
+        split_msg = await split_msg_cq(data, msg, meme, trigger)
     elif type(data.instance) is MiraiBotInstance:
         msg: List = copy.deepcopy(data.message.get('messageChain', []))
         if not msg:
-            log.debug('消息内容为空, 跳过')
+            log.debug(skip_msg)
             return False, 0
         # 第一条永远为Source
         msg.pop(0)
@@ -321,27 +330,66 @@ async def emoji_verify(data: Message):
                 trigger = each_msg
                 break
             else:
-                log.debug('空触发, 跳过')
+                log.debug(null_msg)
                 return False, 0
 
         uid = get_user_id(data)
         try:
             trigger_text: str = trigger['text'].split()[0]
         except IndexError:
-            log.debug('空触发, 跳过')
+            log.debug(null_msg)
             return False, 0
         if not trigger_text.startswith(user_config.meme_command_start):
-            log.debug('非前缀触发, 跳过')
+            log.debug(prefix_msg)
             return False, 0
         meme = await find_meme(trigger_text.replace(user_config.meme_command_start, '').strip(), data)
         if meme is None:
-            log.debug('未找到表情, 跳过')
+            log.debug(none_msg)
             return False, 0
         if not meme_manager.check(uid, meme.key):
-            log.debug('表情被关闭, 跳过')
+            log.debug(close_msg)
             return False, 0
 
-        split_msg = await split_msg_v11_mirai(data, msg, meme, trigger)
+        split_msg = await split_msg_mirai(data, msg, meme, trigger)
+    elif type(data.instance) is KOOKBotInstance:
+        msg: Dict = copy.deepcopy(data.message.get('extra'))
+        if not msg:
+            log.debug(skip_msg)
+            return False, 0
+
+        # 去除回复默认@
+        if msg.get('quote'):
+            msg['mention'].pop(0)
+
+        # 去除所有@消息
+        trigger = msg['kmarkdown']['raw_content']
+        trigger = trigger.split(' ')
+        triggers = []
+        trigger_text = ''
+        for each_trigger in trigger:
+            if each_trigger.startswith('@'):
+                continue
+            triggers.append(each_trigger)
+        if len(triggers) > 0:
+            trigger_text = triggers[0].strip()
+        if not trigger_text:
+            log.debug(null_msg)
+            return False, 0
+
+        uid = get_user_id(data)
+        if not trigger_text.startswith(user_config.meme_command_start):
+            log.debug(prefix_msg)
+            return False, 0
+        meme = await find_meme(trigger_text.replace(user_config.meme_command_start, '').strip(), data)
+        if meme is None:
+            log.debug(none_msg)
+            return False, 0
+        if not meme_manager.check(uid, meme.key):
+            log.debug(close_msg)
+            return False, 0
+
+        split_msg = await split_msg_kook(data, msg, meme, triggers)
+
     if split_msg and meme:
         raw_texts: List[str] = split_msg['texts']
         users: List[User] = split_msg['users']

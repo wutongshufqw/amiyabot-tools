@@ -3,7 +3,17 @@ import os
 import time
 from typing import Union
 
-from amiyabot.database import *
+from amiyabot.database import (
+    AutoField,
+    BooleanField,
+    CharField,
+    DateField,
+    IntegerField,
+    ModelClass,
+    connect_database,
+    table,
+    fn
+)
 
 from ..config import bottle_dir
 
@@ -151,6 +161,14 @@ class BottlePicture(ToolsBaseModel):
     id: int = AutoField()
     picture: str = CharField(unique=True)
     count: int = IntegerField(default=1)
+
+
+@table
+class SKLand(ToolsBaseModel):
+    id: int = AutoField()
+    user_id: int = IntegerField()
+    cred: str = CharField()
+    remark: str = CharField(null=True)
 
 
 class SQLHelper:
@@ -407,27 +425,42 @@ class SQLHelper:
                             text: Union[str, None] = None, picture: Union[str, None] = None, check: bool = False):
         res = None
         if max_bottle < 0:
-            res = BottleFlow.create(user_id=user_id, user_name=user_name, anonymous=anonymous, time=time_, text=text,
-                                    picture=picture, check=check)
-        elif max_bottle == 0:
-            pass
-        else:
+            res = BottleFlow.create(
+                        user_id=user_id,
+                        user_name=user_name,
+                        anonymous=anonymous,
+                        time=time_,
+                        text=text,
+                        picture=picture,
+                        check=check
+            )
+        elif max_bottle != 0:
             count = BottleFlow.select().where(BottleFlow.check == False).count()
-            if count < max_bottle:
-                res = BottleFlow.create(user_id=user_id, user_name=user_name, anonymous=anonymous, time=time_,
-                                        text=text, picture=picture, check=check)
+            if count < max_bottle or check:
+                res = BottleFlow.create(
+                        user_id=user_id,
+                        user_name=user_name,
+                        anonymous=anonymous,
+                        time=time_,
+                        text=text,
+                        picture=picture,
+                        check=check
+                )
             else:
-                if check:
-                    res = BottleFlow.create(user_id=user_id, user_name=user_name, anonymous=anonymous, time=time_,
-                                            text=text, picture=picture, check=check)
-                else:
-                    while count >= max_bottle:
-                        bottle = BottleFlow.select().where(BottleFlow.check == False).order_by(BottleFlow.time.asc())\
-                            .first()
-                        await SQLHelper.delete_bottle_by_id(bottle.id)
-                        count -= 1
-                    res = BottleFlow.create(user_id=user_id, user_name=user_name, anonymous=anonymous, time=time_,
-                                            text=text, picture=picture, check=check)
+                while count >= max_bottle:
+                    bottle = BottleFlow.select().where(BottleFlow.check == False).order_by(BottleFlow.time.asc())\
+                        .first()
+                    await SQLHelper.delete_bottle_by_id(bottle.id)
+                    count -= 1
+                res = BottleFlow.create(
+                        user_id=user_id,
+                        user_name=user_name,
+                        anonymous=anonymous,
+                        time=time_,
+                        text=text,
+                        picture=picture,
+                        check=check
+                )
         if res and picture:
             pictures = picture.split(';')
             for pic in pictures:
@@ -450,6 +483,12 @@ class SQLHelper:
     @staticmethod
     async def delete_all_bottle():
         bottles = BottleFlow.select().where(BottleFlow.check == False)
+        for bottle in bottles:
+            await SQLHelper.delete_bottle_by_id(bottle.id)
+
+    @staticmethod
+    async def delete_unchecked_bottle():
+        bottles = BottleFlow.select().where(BottleFlow.check == True)
         for bottle in bottles:
             await SQLHelper.delete_bottle_by_id(bottle.id)
 
@@ -490,3 +529,16 @@ class SQLHelper:
     @staticmethod
     async def get_check_bottles():
         return BottleFlow.select().where(BottleFlow.check == True).order_by(BottleFlow.time.asc())
+
+    @staticmethod
+    async def set_skland(user_id: int, cred: int):
+        skland = SKLand.get_or_none(SKLand.user_id == user_id)
+        if skland:
+            skland.cred = cred
+            return skland.save()
+        else:
+            return SKLand.create(user_id=user_id, cred=cred)
+        
+    @staticmethod
+    async def get_skland(user_id: int):
+        return SKLand.get_or_none(SKLand.user_id == user_id)

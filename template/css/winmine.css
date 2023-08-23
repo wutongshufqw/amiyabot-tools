@@ -91,3 +91,11 @@ table {
     background-color: red;
     font-size: 1.4rem;
 }
+
+.success {
+    width: 30px;
+    height: 30px;
+    border: 0.2rem inset darkseagreen;
+    background-color: forestgreen;
+    font-size: 1.4rem;
+}

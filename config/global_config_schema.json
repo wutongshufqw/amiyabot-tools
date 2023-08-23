@@ -12,6 +12,7 @@
                 "emoji",
                 "game",
                 "group",
+                "arknights",
                 "admin",
                 "test"
             ],
@@ -34,6 +35,11 @@
                 "group": {
                     "title": "群应用",
                     "description": "群应用功能",
+                    "type": "boolean"
+                },
+                "arknights": {
+                    "title": "方舟",
+                    "description": "方舟相关工具",
                     "type": "boolean"
                 },
                 "admin": {
@@ -267,6 +273,27 @@
                             "type": "integer"
                         }
                     }
+                }
+            }
+        },
+        "remake": {
+            "title": "人生重开",
+            "description": "消息配置",
+            "type": "object",
+            "required": [
+                "forward",
+                "num"
+            ],
+            "properties": {
+                "forward": {
+                    "title": "合并转发",
+                    "description": "是否启用合并转发, 仅对群聊生效",
+                    "type": "boolean"
+                },
+                "num": {
+                    "title": "条目",
+                    "description": "单次发送条目数",
+                    "type": "integer"
                 }
             }
         },
@@ -504,6 +531,11 @@
                     "type": "boolean"
                 }
             }
+        },
+        "skland": {
+            "title": "SkLand++",
+            "description": "SkLand++地址",
+            "type": "string"
         }
     }
 }

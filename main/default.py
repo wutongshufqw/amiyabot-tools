@@ -6,7 +6,7 @@ import random
 import re
 import time
 from io import BytesIO
-from typing import Union, Dict
+from typing import Union
 
 from amiyabot import MiraiBotInstance, CQHttpBotInstance, Event, Chain, Message, Equal
 from amiyabot.adapters.cqhttp import CQHTTPForwardMessage
@@ -18,7 +18,7 @@ from lxml import etree
 
 from core import read_yaml, Admin
 from core.database.user import UserInfo, UserGachaInfo
-from .main import bot, tool_is_close, get_cooldown, set_cooldown, recall_list, download_avatar
+from .main import bot, tool_is_close, get_cooldown, set_cooldown, recall_list
 from ..api import GOCQTools, MiraiTools
 from ..config import poke_message_send, request_headers, get_url
 from ..utils import SQLHelper, convert, get_saucenao, Waifu, Caiyun
@@ -39,7 +39,7 @@ async def poke_helper(instance: Union[MiraiBotInstance, CQHttpBotInstance], even
             msg = random.choice(config_.get('replies'))
             if msg.find('[crazy]') == -1:
                 break
-    pattern = re.compile(r'\[.*?]')
+    pattern = re.compile(r'\[[^\]]+\]')
     m0 = pattern.findall(msg)
     m1 = pattern.split(msg)
     flag = False
@@ -70,7 +70,7 @@ async def poke_helper(instance: Union[MiraiBotInstance, CQHttpBotInstance], even
                 img_pid = illust['id']
                 img = await download_async(img_url, request_headers)
                 message = Chain().at(data['fromId'] if type(instance) == MiraiBotInstance else data['user_id']).text(
-                    '\n标题：' + img_name + '\n作者：' + img_author + '\nPID：' + str(img_pid)).image(img)
+                    '\n标题:' + img_name + '\n作者:' + img_author + '\nPID:' + str(img_pid)).image(img)
                 await poke_message_send(message, event, instance)
             elif m0[i] == '[poke]':
                 if flag:
@@ -95,7 +95,7 @@ async def poke_helper(instance: Union[MiraiBotInstance, CQHttpBotInstance], even
                 image = f'{os.path.dirname(__file__)}/../../{image_path}/{image}'
                 message = message.image(image)
             elif m0[i] == '[crazy]':
-                crazy = read_yaml(f'{os.path.dirname(__file__)}/crazy.yaml', _dict=True)
+                crazy = read_yaml(f'{os.path.dirname(__file__)}/../api/crazy.yaml', _dict=True)
                 if not flag:
                     message = Chain()
                     flag = True
@@ -107,7 +107,6 @@ async def poke_helper(instance: Union[MiraiBotInstance, CQHttpBotInstance], even
                 message = message.text(m0[i])
     if flag:
         await poke_message_send(message, event, instance)
-    return
 
 
 # 戳一戳
@@ -207,7 +206,7 @@ def verify_prefix(msg: str):
             re.compile(
                 '^(1\\d{2}|2[0-4]\\d|25[0-5]|[1-9]\\d|[1-9])\\.(1\\d{2}|2[0-4]\\d|25[0-5]|[1-9]\\d|\\d)\\.(1\\d{2}|2['
                 '0-4]\\d|25[0-5]|[1-9]\\d|\\d)\\.(1\\d{2}|2[0-4]\\d|25[0-5]|[1-9]\\d|\\d)$'),
-            re.compile('^(13[0-9]|14[01456879]|15[0-35-9]|16[2567]|17[0-8]|18[0-9]|19[0-35-9])\\d{8}$')
+            re.compile('^(13\\d|14[01456879]|15[0-35-9]|16[2567]|17[0-8]|18\\d|19[0-35-9])\\d{8}$')
         ]
         for pattern in patterns:
             if pattern.search(info):
@@ -246,19 +245,21 @@ async def ai(data: Message):
             is_template=False, render_time=1000, height=1000, width=1000
         )
     res = await http_requests.get(f'http://api.qingyunke.com/api.php?key=free&appid=0&msg={data.text_original}')
-    result = json.loads(res)
-    content = convert(result['content'], 'zh-cn').replace('{br}', '\n').replace('菲菲', '兔兔')
-    pattern = re.compile(r'\{face:.*?}')
-    m0 = pattern.findall(content)
-    m1 = pattern.split(content)
-    msg = Chain(data, at=False)
-    for i in range(len(m1)):
-        msg = msg.text(m1[i])
-        if i < len(m0):
-            msg = msg.face(m0[i].replace('{face:', '').replace('}', ''))
-    if content != "未获取到相关信息":
-        return msg
-    return
+    try:
+        result = json.loads(res)
+        content = convert(result['content'], 'zh-cn').replace('{br}', '\n').replace('菲菲', '兔兔')
+        pattern = re.compile(r'\{face:[^}]*\}')
+        m0 = pattern.findall(content)
+        m1 = pattern.split(content)
+        msg = Chain(data, at=False)
+        for i in range(len(m1)):
+            msg = msg.text(m1[i])
+            if i < len(m0):
+                msg = msg.face(m0[i].replace('{face:', '').replace('}', ''))
+        if content != "未获取到相关信息":
+            return msg
+    except Exception as e:
+        log.error(e)
 
 
 # 搜图
@@ -284,7 +285,6 @@ async def search_image(data: Message):
             res = await data.send(Chain(data).text(tip).image(image).text('\n20s后撤回'))
             if res:
                 recall_list.append({'res': res, 'time': time.time() + 20})
-            return
         else:
             tip = '出错了>_<\n' + '错误信息:\n' + tip
             return Chain(data).text(tip)
@@ -341,7 +341,6 @@ async def fake_message(data: Message):
                         reply = await data.wait(
                             Chain(reply).text('输入错误，请重新发送要伪造的消息并@对方,发送"\\stop"以结束'), True,
                             max_time=60)
-                        continue
                     elif msg == '\\stop':
                         await forward.send()
                         return
@@ -349,7 +348,6 @@ async def fake_message(data: Message):
                         reply = await data.wait(
                             Chain(reply).text('未@任何人,请重新发送要伪造的消息并@对方,发送"\\stop"以结束'), True,
                             max_time=60)
-                        continue
                     else:
                         member_info = await helper.get_group_member_info(int(data.channel_id), int(reply.at_target[0]))
                         if not member_info:
@@ -357,7 +355,6 @@ async def fake_message(data: Message):
                                 Chain(reply).text('获取用户信息失败,请重新发送要伪造的消息并@对方,发送"\\stop"以结束'),
                                 True,
                                 max_time=60)
-                            continue
                         else:
                             nickname = member_info['nickname']
                             chain = Chain().text(msg)
@@ -444,7 +441,7 @@ async def api_handler(data: Message):
                                 await data.send(Chain(reply, at=False).text(f'提示：{response["ts"]}'))
                                 tip = True
                             else:
-                                await data.send(Chain(reply, at=False).text(f'已经提示过了哦'))
+                                await data.send(Chain(reply, at=False).text('已经提示过了哦'))
                         elif reply.text_original.startswith('结束'):
                             break
                         else:
@@ -458,7 +455,6 @@ async def api_handler(data: Message):
                 await data.send(Chain(data, at=False).text('谜题获取失败，请稍后再试'))
         except Exception:
             await data.send(Chain(data, at=False).text('谜题获取失败，请稍后再试'))
-    return
 
 
 # 抽奖
@@ -496,8 +492,7 @@ async def lottery(data: Message):
             else:
                 return Chain(data).text(f'很遗憾，{data.nickname}没有抽中奖品！')
         else:
-            return Chain(data, at=False).text(f'该周期中奖名额已满，下次再来吧！')
-    return
+            return Chain(data, at=False).text('该周期中奖名额已满，下次再来吧！')
 
 
 # 今日老婆
@@ -508,31 +503,28 @@ async def today_wife(data: Message):
     wife = await SQLHelper.get_today_wife(int(data.instance.appid), int(data.channel_id), int(data.user_id))
     if wife:
         try:
-            avatar = await download_avatar(str(wife.wife_id))
+            avatar = await data.instance.api.get_user_avatar(str(wife.wife_id))
             return Chain(data).text('今天已经娶过群友老婆了哦，你的今日老婆是').image(avatar).text(
                 f'{wife.nickname}({wife.wife_id})')
         except Exception:
             return Chain(data).text('今天已经娶过群友老婆了哦，你的今日老婆是').text(f'{wife.nickname}({wife.wife_id})')
     else:
-        helper = MiraiTools(data.instance) if type(data.instance) == MiraiBotInstance else GOCQTools(data.instance) \
-            if type(data.instance) == CQHttpBotInstance else None
-        if helper:
-            group_member_list = await helper.get_group_member_list(int(data.channel_id))
+        if type(data.instance) in [MiraiBotInstance, CQHttpBotInstance]:
+            group_member_list = await data.instance.api.get_group_member_list(group_id=data.channel_id)
             if group_member_list:
                 while True:
                     wife = random.choice(group_member_list)
-                    wife_id = wife.get('user_id') or wife.get('id')
+                    wife_id = wife.get('user_id')
                     if int(wife_id) != int(data.user_id):
                         break
-                nickname = wife.get('card') or wife.get('nickname') or wife.get('memberName')
+                nickname = wife.get('nickname') if wife.get('nickname') != '' else wife.get('name')
                 await SQLHelper.set_today_wife(int(data.instance.appid), int(data.channel_id), int(data.user_id),
                                                int(wife_id), nickname)
                 try:
-                    avatar = await download_avatar(str(wife_id))
+                    avatar = await data.instance.api.get_user_avatar(str(wife_id))
                     return Chain(data).text('你的今日老婆是').image(avatar).text(f'{nickname}({wife_id})')
                 except Exception:
                     return Chain(data).text('你的今日老婆是').text(f'{nickname}({wife_id})')
-    return
 
 
 # 今日老婆
@@ -649,6 +641,7 @@ async def caiyun_ai(data: Message):
 
     nums = 0
     caiyun = None
+    tip = '请选择接下来的剧情分支哦~(使用->剧情选择)'
 
     async def data_filter1(data_: Message):
         if re.match(r'^[1-6]$', data_.text_original):
@@ -673,9 +666,9 @@ async def caiyun_ai(data: Message):
             choose = int(reply.text_original)
             if choose == 1:
                 await data.send(Chain(data)
-                                .text("apikey获取教程：\n1、前往 http://if.caiyunai.com/dream 注册彩云小梦用户；\n2、注册完成后，"
+                                .text("apikey获取教程:\n1、前往 http://if.caiyunai.com/dream 注册彩云小梦用户；\n2、注册完成后,"
                                       "在 chrome 浏览器地址栏输入(或者按下F12在控制台输入) javascript:alert(JSON.parse(localSto"
-                                      "rage.getItem('pro_new-dreamily-user')).value)，（前缀javascript也需要复制），弹出窗口中"
+                                      "rage.getItem('pro_new-dreamily-user')).value),(前缀javascript也需要复制),弹出窗口中"
                                       "的uid即为apikey")
                                 )
             elif choose == 2:
@@ -723,15 +716,35 @@ async def caiyun_ai(data: Message):
                     caiyun = Caiyun(str(res.apikey), str(res.model))
                     caiyun.content = reply.text_original
                     await data.send(Chain(reply).text('正在续写中，请稍后'))
-                    await caiyun.next()
-                    new_list = [
-                                   "当前续写结果：",
-                                   caiyun.content,
-                                   "请选择接下来的剧情分支哦~(使用->剧情选择)"
-                               ] + [f"{i + 1}.{j}" for i, j in enumerate(caiyun.contents)]
+                    message = await caiyun.next()
+                    if message:
+                        return Chain(data).text(message)
+                    forward = None
+                    if type(data.instance) is MiraiBotInstance:
+                        forward = MiraiForwardMessage(data)
+                    elif type(data.instance) is CQHttpBotInstance:
+                        forward = CQHTTPForwardMessage(data)
                     nums = len(caiyun.contents)
-                    msg = '\n'.join(new_list)
-                    await data.send(Chain(data).text(msg))
+                    if forward:
+                        # 每1000个字符裁剪一次
+                        index = 0
+                        while index < len(caiyun.content):
+                            max_index = min(index+1000, len(caiyun.content))
+                            content = caiyun.content[index:max_index]
+                            await forward.add_message(Chain().text(content), user_id=data.instance.appid, nickname='续写结果')
+                            index = max_index
+                        await forward.add_message(Chain().text(tip), user_id=data.instance.appid, nickname='剧情选择')
+                        for i, j in enumerate(caiyun.contents):
+                            await forward.add_message(Chain().text(f"{i + 1}.{j}"), user_id=data.instance.appid, nickname='剧情选择')
+                        await forward.send()
+                    else:
+                        new_list = [
+                                       '当前续写结果：',
+                                       caiyun.content,
+                                       tip
+                                   ] + [f"{i + 1}.{j}" for i, j in enumerate(caiyun.contents)]
+                        msg = '\n'.join(new_list)
+                        await data.send(Chain(data).text(msg))
                 else:
                     continue
             elif choose == 5:
@@ -745,15 +758,37 @@ async def caiyun_ai(data: Message):
                         continue
                     choose = int(reply.text_original)
                     caiyun.select(choose - 1)
-                    await caiyun.next()
-                    new_list = [
-                        "当前续写结果：",
-                        caiyun.content,
-                        "请选择接下来的剧情分支哦~(使用->剧情选择)"
-                    ] + [f"{i + 1}.{j}" for i, j in enumerate(caiyun.contents)]
+                    await data.send(Chain(reply).text('正在续写中，请稍后'))
+                    message = await caiyun.next()
+                    if message:
+                        return Chain(data).text(message)
+                    forward = None
+                    if type(data.instance) is MiraiBotInstance:
+                        forward = MiraiForwardMessage(data)
+                    elif type(data.instance) is CQHttpBotInstance:
+                        forward = CQHTTPForwardMessage(data)
                     nums = len(caiyun.contents)
-                    msg = '\n'.join(new_list)
-                    await data.send(Chain(reply).text(msg))
+                    if forward:
+                        # 每1000个字符裁剪一次
+                        index = 0
+                        while index < len(caiyun.content):
+                            max_index = min(index+1000, len(caiyun.content))
+                            content = caiyun.content[index:max_index]
+                            await forward.add_message(Chain().text(content), user_id=data.instance.appid, nickname='续写结果')
+                            index = max_index
+                        await forward.add_message(Chain().text(tip), user_id=data.instance.appid, nickname='剧情选择')
+                        for i, j in enumerate(caiyun.contents):
+                            await forward.add_message(Chain().text(f"{i + 1}.{j}"), user_id=data.instance.appid, nickname='剧情选择')
+                        await forward.send()
+                    else:
+                        new_list = [
+                                       '当前续写结果：',
+                                       caiyun.content,
+                                       tip
+                                   ] + [f"{i + 1}.{j}" for i, j in enumerate(caiyun.contents)]
+                        nums = len(caiyun.contents)
+                        msg = '\n'.join(new_list)
+                        await data.send(Chain(data).text(msg))
             elif choose == 6:
                 return Chain(reply).text('已退出')
         else:

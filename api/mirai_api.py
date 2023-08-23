@@ -27,26 +27,27 @@ class MiraiHttpHelper:
                                {'sessionKey': self.session, 'target': target, 'subject': subject, 'kind': kind})
 
     async def member_info(self, target: int, member_id: int, name: str = None, special_title: str = None):
+        path = '/memberInfo'
         if name is not None:
-            return await self.post('/memberInfo', {'sessionKey': self.session, 'target': target, 'memberId': member_id,
+            return await self.post(path, {'sessionKey': self.session, 'target': target, 'memberId': member_id,
                                                    'info': {'name': name}})
         elif special_title is not None:
-            return await self.post('/memberInfo', {'sessionKey': self.session, 'target': target, 'memberId': member_id,
+            return await self.post(path, {'sessionKey': self.session, 'target': target, 'memberId': member_id,
                                                    'info': {'specialTitle': special_title}})
         elif name is not None and special_title is not None:
-            return await self.post('/memberInfo', {'sessionKey': self.session, 'target': target, 'memberId': member_id,
+            return await self.post(path, {'sessionKey': self.session, 'target': target, 'memberId': member_id,
                                                    'info': {'name': name, 'specialTitle': special_title}})
 
-    async def new_friend_request_event(self, eventId: int, from_id: int, group_id: int, operate: int,
+    async def new_friend_request_event(self, event_id: int, from_id: int, group_id: int, operate: int,
                                        message: str = ''):
-        return await self.post('/resp/newFriendRequestEvent', {'sessionKey': self.session, 'eventId': eventId,
+        return await self.post('/resp/newFriendRequestEvent', {'sessionKey': self.session, 'eventId': event_id,
                                                                'fromId': from_id, 'groupId': group_id,
                                                                'operate': operate,
                                                                'message': message})
 
-    async def bot_invited_join_group_request_event(self, eventId: int, from_id: int, group_id: int, operate: int,
+    async def bot_invited_join_group_request_event(self, event_id: int, from_id: int, group_id: int, operate: int,
                                                    message: str = ''):
-        return await self.post('/resp/botInvitedJoinGroupRequestEvent', {'sessionKey': self.session, 'eventId': eventId,
+        return await self.post('/resp/botInvitedJoinGroupRequestEvent', {'sessionKey': self.session, 'eventId': event_id,
                                                                          'fromId': from_id, 'groupId': group_id,
                                                                          'operate': operate,
                                                                          'message': message})
@@ -207,14 +208,6 @@ class MiraiTools:
         result = json.loads(res)
         if result.get('nickname'):
             return result
-        else:
-            return False
-
-    async def get_message(self, message_id: int, target: int) -> Union[bool, dict]:
-        res = await self.helper.message_from_id(message_id, target)
-        result = json.loads(res)
-        if result['code'] == 0:
-            return result['data']
         else:
             return False
 

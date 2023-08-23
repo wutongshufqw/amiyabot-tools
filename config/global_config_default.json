@@ -4,6 +4,7 @@
         "emoji": false,
         "game": false,
         "group": false,
+        "arknights": false,
         "admin": false,
         "test": false
     },
@@ -57,6 +58,10 @@
             "group": 123456
         }
     },
+    "remake": {
+        "forward": false,
+        "num": 5
+    },
     "specialTitle": {
         "admin": false,
         "cd": 1800,
@@ -93,5 +98,6 @@
         "interval": 60,
         "message": "抱歉，当前群聊人数不满足要求：{min}~{max}，兔兔即将退出~",
         "tip": true
-    }
+    },
+    "skland": "https://laviniafalcone.github.io/Enhance-for-Skland/"
 }
