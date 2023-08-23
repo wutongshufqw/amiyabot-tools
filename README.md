@@ -1,5 +1,5 @@
 ﻿<div align="center">
-    <img src="https://i0.hdslb.com/bfs/album/9dda3f738e0745014f2e878b8f0a4a21f341d877.png" width="180" height="180" alt="AmiyaBotLogo">
+    <img src="https://img1.imgtp.com/2023/08/23/RyQuE7hW.png" width="180" height="180" alt="ToolLogo">
 </div>
 
 <div align="center">
@@ -41,11 +41,11 @@
   1. 从1.9.7.3开始，插件将使用试验性功能进行新功能开发，待功能基本完善后将会发布正式版本
      - 试验功能可能会伴随着其他功能的Bug修复，因此建议更新，如果你不想使用试验功能，可以关闭试验功能的载入
      - 试验功能不会加入到小工具全局管理中，且只有超级管理员能够使用
-  2. <font color=Orange>小工具所有功能默认关闭(包括更新后新增的), 请私聊兔兔自行开启 </font>
-  3. <font color=Red>**免责声明：伪造消息功能由管理员开启，该功能默认关闭，由于伪造消息而造成的经济，财产，精神损失的与本插件作者无关** </font>
+  2. `<font color=Orange>`小工具所有功能默认关闭(包括更新后新增的), 请私聊兔兔自行开启 `</font>`
+  3. `<font color=Red>`**免责声明：伪造消息功能由管理员开启，该功能默认关闭，由于伪造消息而造成的经济，财产，精神损失的与本插件作者无关** `</font>`
   4. 插件所有功能进行了模块化，你可以自由选择导入不同的模块，未导入的模块将不会加载以节约服务器资源, 详见控制台
-     - <font color=Orange>注意, 该配置项是从代码层面实现配置项的动态加载, 因此修改后需要重新启动兔兔才会生效,
-       此配置项优先级高于小工具全局管理</font>
+     - `<font color=Orange>`注意, 该配置项是从代码层面实现配置项的动态加载, 因此修改后需要重新启动兔兔才会生效,
+       此配置项优先级高于小工具全局管理`</font>`
   5. 若字体显示错误请参阅[字体安装](https://github.com/MeetWq/meme-generator/blob/main/docs/install.md)
 
 > ## 配置项说明
@@ -77,6 +77,7 @@
 >>
 
 # 🎉 特别感谢
+
 - [AmiyaBot](https://github.com/AmiyaBot/Amiya-Bot): 基于 AmiyaBot 框架的 QQ 聊天机器人
 - [nonebot-plugin-memes](https://github.com/noneplugin/nonebot-plugin-memes): ✨ Nonebot2 表情包制作插件 ✨
 - [nonebot-plugin-remake](https://github.com/noneplugin/nonebot-plugin-remake): 适用于 Nonebot2 的人生重开模拟器
@@ -84,7 +85,9 @@
 - [nonebot-plugin-oddtext](https://github.com/noneplugin/nonebot-plugin-oddtext): Nonebot2 插件，用于抽象话等文本生成
 
 # 许可证
+
 本项目使用 [MIT](https://choosealicense.com/licenses/mit/) 作为开源许可证
 
 # 仓库
+
 - [amiyabot-tools](https://github.com/wutongshufqw/amiyabot-tools): AmiyaBot 小工具合集插件，自行编写并移植多个NoneBot2插件
