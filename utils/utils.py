@@ -2,7 +2,7 @@ import asyncio
 import re
 import zipfile
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 from amiyabot import Message, Chain
 

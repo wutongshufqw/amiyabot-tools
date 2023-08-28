@@ -16,7 +16,7 @@ from amiyabot.network.httpRequests import http_requests
 from core import log
 from lxml import etree
 
-from core import read_yaml, Admin
+from core import read_yaml
 from core.database.user import UserInfo, UserGachaInfo
 from .main import bot, tool_is_close, get_cooldown, set_cooldown, recall_list
 from ..api import GOCQTools, MiraiTools
@@ -178,7 +178,7 @@ async def eat(data: Message):
 async def adjust_ai(data: Message):
     if await tool_is_close(data.instance.appid, 1, 1, 3, data.channel_id):
         return
-    if data.is_admin or bool(Admin.get_or_none(account=data.user_id)):
+    if data.is_admin:
         pattern = re.compile('^.*?调整AI概率\\D*?(\\d+)$', re.I)
         m = pattern.match(data.text_original)
         if not m:
@@ -371,7 +371,7 @@ async def fake_message(data: Message):
 async def fake_message_switch(data: Message):
     if await tool_is_close(data.instance.appid, 1, 1, 5, data.channel_id):
         return
-    if data.is_admin or bool(Admin.get_or_none(account=data.user_id)):
+    if data.is_admin:
         if '开启' in data.text_original:
             if await SQLHelper.set_fake(data.instance.appid, data.channel_id, True):
                 return Chain(data).text('开启成功')

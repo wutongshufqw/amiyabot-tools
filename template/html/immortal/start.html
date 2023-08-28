@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+          name="viewport">
+    <title>template</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+    <link rel="stylesheet" href="../../css/immortal/font.css">
+    <link rel="stylesheet" href="../../css/immortal/start.css">
+    <script src="../../js/vue.min.js"></script>
+</head>
+<body>
+<div id="template">
+<div class="card text-center">
+    <div class="card-header welcome">
+        {{data.msg}}
+    </div>
+  <div class="card-body">
+    <div class="card-title content-font">
+        <span class="content">灵根: {{data.root}}</span>
+        <span v-if="data.root.indexOf('器师')!= -1">🗡️</span>
+        <span v-if="data.root.indexOf('金') != -1">🪙</span>
+        <span v-if="data.root.indexOf('木') != -1">🪵</span>
+        <span v-if="data.root.indexOf('水') != -1">💧</span>
+        <span v-if="data.root.indexOf('火') != -1">🔥</span>
+        <span v-if="data.root.indexOf('土') != -1">⛰</span>
+        <span v-if="data.root.indexOf('雷') != -1">🌩</span>
+        <span v-if="data.root.indexOf('冰') != -1">🧊</span>
+        <span v-if="data.root.indexOf('暗') != -1">⚫</span>
+        <span v-if="data.root.indexOf('风') != -1">🌬</span>
+        <span v-if="data.root.indexOf('光') != -1">✨</span>
+        <span v-if="data.root.indexOf('空间') != -1">🗍</span>
+        <span v-if="data.root.indexOf('时间') != -1">🕘</span>
+        <span v-if="data.root.indexOf('言灵') != -1">🗣</span>
+        <span v-if="data.root.indexOf('日') != -1">☀</span>
+        <span v-if="data.root.indexOf('月') != -1">🌙</span>
+        <span v-if="data.root.indexOf('融合万物') != -1">♾</span>
+        <span v-if="data.root.indexOf('全属性') != -1">👊</span>
+    </div>
+    <div class="card-title content-font">
+        <span class="content ">类型: {{data.root_type}}</span>
+        <span v-if="data.root_type ==='伪灵根'">🤥</span>
+        <span v-else-if="data.root_type ==='真灵根'">👍</span>
+        <span v-else-if="data.root_type ==='变异灵根'">👽</span>
+        <span v-else-if="data.root_type ==='天灵根'">🌤</span>
+        <span v-else-if="data.root_type ==='龙灵根'">🐉</span>
+        <span v-else-if="data.root_type ==='超灵根'">👑</span>
+        <span v-else-if="data.root_type ==='融合灵根'">🌀</span>
+        <span v-else-if="data.root_type ==='混沌灵根'">☯</span>
+    </div>
+    <div class="card-title content-font">
+        <div class="row align-items-center">
+            <span class="content col-3">战力: </span>
+            <div class="progress col-9" style="height: 30px; padding: 0%">
+                <div class="progress-bar progress-bar-striped" :style="MyProgress" v-if="data.power <= 120">{{data.power}}</div>
+                <div class="progress-bar progress-bar-striped bg-success" :style="MyProgress" v-else-if="data.power <= 140">{{data.power}}</div>
+                <div class="progress-bar progress-bar-striped bg-info" :style="MyProgress" v-else-if="data.power <= 160">{{data.power}}</div>
+                <div class="progress-bar progress-bar-striped bg-warning" :style="MyProgress" v-else-if="data.power <= 180">{{data.power}}</div>
+                <div class="progress-bar progress-bar-striped bg-danger" :style="MyProgress" v-else>{{data.power}}</div>
+            </div>
+        </div>
+    </div>
+  </div>
+</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-HwwvtgBNo3bZJJLYd8oVXjrBZt8cqVSpeBNS5n7C8IVInixGAoxmnlMuBnhbgrkm" crossorigin="anonymous"></script>
+</body>
+<script>
+    const template = new Vue({
+        el: '#template',
+        methods: {
+            init(data) {
+                this.$set(this, 'data', data)
+            }
+        },
+        data() {
+            return {
+                data: {}
+            }
+        },
+        mounted() {
+            // 暴露 init 方法供核心调用
+            window.init = this.init
+        },
+        computed: {
+            // 计算属性
+            MyProgress: function () {
+                return {
+                    width: this.data.power > 200 ? '100%' : (this.data.power / 2) + '%',
+                    height: ''
+                }
+            }
+        },
+    })
+</script>
+</html>

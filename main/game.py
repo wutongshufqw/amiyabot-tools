@@ -14,7 +14,8 @@ from amiyabot.adapters.mirai import MiraiForwardMessage
 from amiyabot.network.download import download_async
 from amiyabot.util import run_in_thread_pool
 
-from core import bot as main_bot, Admin, log
+from core import bot as main_bot, log
+from core.database.bot import Admin
 from .main import bot, curr_dir, tool_is_close, create_file, remove_file
 from ..config import bottle_dir
 from ..utils import Bottle, SQLHelper, Tarot, Life, Talent, PerAgeProperty, PerAgeResult, Summary, save_jpg, draw_life
@@ -513,7 +514,7 @@ async def bottle(data: Message):
                 else:
                     return Chain(data).text(permission_deny)
             else:
-                if data.is_admin or bool(Admin.get_or_none(account=data.user_id)):
+                if data.is_admin:
                     if re.match(number_re, match.group(4)):
                         bottle_ = await SQLHelper.get_bottle_by_id(int(match.group(4)))
                         if bottle_:

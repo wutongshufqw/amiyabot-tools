@@ -6,7 +6,8 @@ import os
 import sys
 import time
 
-from core import Admin, bot as main_bot, GitAutomation, log
+from core import bot as main_bot, GitAutomation, log
+from core.database.bot import Admin
 
 try:
     import psutil
@@ -47,15 +48,8 @@ async def restart(data: Message):
         return Chain(data).text('权限不足')
 
 
-async def check_restart(t: int):
-    if t > 10:
-        return True
-    else:
-        return False
-
-
 # noinspection PyUnusedLocal
-@bot.timed_task(custom=check_restart, sub_tag='tools-restart')
+@bot.timed_task(each=10, sub_tag='tools-restart')
 async def restart_task(instance: BotHandlerFactory):
     bot.remove_timed_task('tools-restart')
     config_ = bot.get_config('superuser')

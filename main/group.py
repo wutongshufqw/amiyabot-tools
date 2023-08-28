@@ -5,7 +5,7 @@ import time
 
 from amiyabot import Message, Chain, MiraiBotInstance, CQHttpBotInstance, Event
 
-from core import Admin
+from core.database.bot import Admin
 from core.database.user import User
 from .main import bot, tool_is_close, get_cooldown, set_cooldown
 from ..api import MiraiTools, GOCQTools
@@ -16,17 +16,13 @@ ban_list = {}
 
 
 # 修改群名片&群头衔
-@bot.on_message(keywords=['修改群名片'], allow_direct=False, level=5)
+@bot.on_message(keywords=re.compile(r'^兔兔修改群名片\s?([\s\S]+)$'), level=5)
 async def set_group_card(data: Message):
     if await tool_is_close(data.instance.appid, 1, 3, 1, data.channel_id):
         return
-    if data.is_admin or bool(Admin.get_or_none(account=data.user_id)):
-        msg = data.text_original.split(' ')
-        if msg.__len__() == 1:
-            return Chain(data).text('请输入新的群名片')
-        elif msg.__len__() > 2:
-            return Chain(data).text('群名片不能有空格')
-        new_card = msg[1]
+    if data.is_admin:
+        match = re.match(r'^兔兔修改群名片\s?([\s\S]+)$', data.text_original)
+        new_card = match.group(1)
         at_member = data.at_target
         if at_member.__len__() == 0:
             target = data.instance.appid
@@ -50,7 +46,7 @@ async def set_group_card(data: Message):
         return Chain(data).text('权限不足')
 
 
-@bot.on_message(keywords=['修改群头衔'], allow_direct=False, level=5)
+@bot.on_message(keywords=['修改群头衔'], level=5)
 async def set_group_special_title(data: Message):
     if await tool_is_close(data.instance.appid, 1, 3, 2, data.channel_id):
         return
@@ -104,7 +100,7 @@ async def set_group_special_title(data: Message):
 async def recall(data: Message):
     if await tool_is_close(data.instance.appid, 1, 3, 3, data.channel_id):
         return
-    if data.is_admin or bool(Admin.get_or_none(account=data.user_id)):
+    if data.is_admin:
         if type(data.instance) is MiraiBotInstance:
             info = data.message['messageChain']
             for i in info:
@@ -124,7 +120,7 @@ async def recall(data: Message):
 async def set_welcome(data: Message):
     if await tool_is_close(data.instance.appid, 1, 3, 4, data.channel_id):
         return
-    if data.is_admin or bool(Admin.get_or_none(account=data.user_id)):
+    if data.is_admin:
         try:
             welcome = data.text_original.split(' ', 1)[1]
             await SQLHelper.set_welcome(data.instance.appid, data.channel_id, welcome)
@@ -138,7 +134,7 @@ async def set_welcome(data: Message):
 async def clear_welcome(data: Message):
     if await tool_is_close(data.instance.appid, 1, 3, 4, data.channel_id):
         return
-    if data.is_admin or bool(Admin.get_or_none(account=data.user_id)):
+    if data.is_admin:
         await SQLHelper.delete_welcome(data.instance.appid, data.channel_id)
         return Chain(data).text('欢迎消息已清除')
     return Chain(data).text('权限不足')
@@ -168,7 +164,7 @@ async def member_join(event: Event, instance: CQHttpBotInstance):
 async def set_quit(data: Message):
     if await tool_is_close(data.instance.appid, 1, 3, 7, data.channel_id):
         return
-    if data.is_admin or bool(Admin.get_or_none(account=data.user_id)):
+    if data.is_admin:
         try:
             quit_ = data.text_original.split(' ', 1)[1].replace('｛', '{').replace('｝', '}')
             await SQLHelper.set_quit(data.instance.appid, data.channel_id, quit_)
@@ -181,7 +177,7 @@ async def set_quit(data: Message):
 async def clear_quit(data: Message):
     if await tool_is_close(data.instance.appid, 1, 3, 7, data.channel_id):
         return
-    if data.is_admin or bool(Admin.get_or_none(account=data.user_id)):
+    if data.is_admin:
         await SQLHelper.delete_quit(data.instance.appid, data.channel_id)
         return Chain(data).text('退群消息已清除')
 
@@ -215,7 +211,7 @@ async def member_quit(event: Event, instance: CQHttpBotInstance):
 async def quit_group(data: Message):
     if await tool_is_close(data.instance.appid, 1, 3, 5, data.channel_id):
         return
-    if data.is_at and (data.is_admin or bool(Admin.get_or_none(account=data.user_id))):
+    if data.is_at and data.is_admin:
         if type(data.instance) is MiraiBotInstance:
             mirai = MiraiTools(data.instance, data=data)
             await mirai.quit_group(int(data.channel_id))

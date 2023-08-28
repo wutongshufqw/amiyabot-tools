@@ -1,0 +1,18 @@
+.welcome {
+    font-family: immortal, sans-serif;
+    font-size: 4em;
+    background: linear-gradient(to right, #f00, #00f);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.content {
+    font-family: immortal, sans-serif;
+    background: linear-gradient(to right, rgb(255, 94, 0), rgb(23, 157, 3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.content-font {
+    font-size: 2.5em;
+}

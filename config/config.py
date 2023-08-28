@@ -31,6 +31,7 @@ tools = [
     {'main_id': 1, 'sub_id': 2, 'sub_sub_id': 3, 'name': '漂流瓶'},
     {'main_id': 1, 'sub_id': 2, 'sub_sub_id': 4, 'name': '塔罗牌'},
     {'main_id': 1, 'sub_id': 2, 'sub_sub_id': 5, 'name': '人生重开'},
+    {'main_id': 1, 'sub_id': 2, 'sub_sub_id': 6, 'name': '修仙'},
 
     {'main_id': 1, 'sub_id': 3, 'sub_sub_id': 1, 'name': '修改群名片'},
     {'main_id': 1, 'sub_id': 3, 'sub_sub_id': 2, 'name': '修改群头衔'},

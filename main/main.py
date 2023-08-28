@@ -246,7 +246,7 @@ async def tools_manage(data: Message):
 
 @bot.on_message(keywords=['小工具管理'], allow_direct=False, level=5)
 async def tools_manage_channel(data: Message):
-    if data.is_admin or bool(Admin.get_or_none(account=data.user_id)):
+    if data.is_admin:
         await update_tools(data)
         limit_time = time.time() + 60
         flag = True

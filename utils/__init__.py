@@ -19,3 +19,7 @@ from .sql import SQLHelper
 from .tarot import Tarot
 from .waifu_lab import Waifu
 from .zhconv import convert
+try:
+    from .immortal import Immortal
+except ImportError as e:
+    log.warning(f'加载Immortal模块失败: {e}')
