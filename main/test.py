@@ -9,11 +9,16 @@ from amiyabot.adapters.cqhttp import CQHTTPForwardMessage
 from amiyabot.adapters.mirai import MiraiForwardMessage
 from amiyabot.factory import BotHandlerFactory
 
-from core import bot as main_bot
+from core import bot as main_bot, log
 from core.database.bot import Admin
 from .main import bot, tool_is_close, curr_dir
 from ..api import GOCQTools
-from ..utils import OddText, Immortal
+from ..utils import OddText
+try:
+    from ..utils.immortal import Immortal
+except ImportError as e:
+    log.warning(f'加载Immortal模块失败: {e}')
+    raise e
 
 double_exp_limit = 3
 

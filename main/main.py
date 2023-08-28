@@ -38,7 +38,7 @@ class ToolsPluginInstance(AmiyaBotPluginInstance):
 
 bot = ToolsPluginInstance(
     name='小工具合集',
-    version='1.9.8.1',
+    version='1.9.8.2',
     plugin_id='amiyabot-tools',
     plugin_type='tools',
     description='AmiyaBot小工具合集 By 天基',
