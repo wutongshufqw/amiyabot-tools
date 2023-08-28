@@ -11,8 +11,8 @@
 <p align="center">
     <img alt="license" src="https://img.shields.io/badge/license-MIT-green">
     <img src="https://img.shields.io/badge/python-3.8+-blue.svg" alt="Python">
-    <img src="https://img.shields.io/badge/amiyabot-1.5.9+-red.svg" alt="AmiyaBot">
-    <img alt="version" src="https://img.shields.io/badge/version-1.9.8.1-orange">
+    <img src="https://img.shields.io/badge/amiyabot-1.7.0+-red.svg" alt="AmiyaBot">
+    <img alt="version" src="https://img.shields.io/badge/version-1.9.8.2-orange">
     <img alt="commit" src="https://img.shields.io/github/commit-activity/m/wutongshufqw/amiyabot-tools?color=%23ff69b4">
     <img alt="size" src="https://img.shields.io/github/repo-size/wutongshufqw/amiyabot-tools?color=%23ffeb3b">
 </p>
